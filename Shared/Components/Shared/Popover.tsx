@@ -8,6 +8,9 @@ interface PopoverProps {
   /** Renders the panel content; call `close()` after a selection. */
   children: (close: () => void) => ReactNode;
   align?: "left" | "right";
+  /** Na kterou stranu triggeru panel vyjede. "top" je pro triggery u spodní
+   * hrany okna — panel by jinak vyjel pod ni a byl nedosažitelný. */
+  side?: "bottom" | "top";
   panelClassName?: string;
 }
 
@@ -20,6 +23,7 @@ export function Popover({
   trigger,
   children,
   align = "left",
+  side = "bottom",
   panelClassName,
 }: PopoverProps) {
   const [open, setOpen] = useState(false);
@@ -77,9 +81,9 @@ export function Popover({
           // clicking a date visually did nothing. Same fix already applied
           // to ContextMenu.tsx's panel for the same reason.
           data-marquee-ignore="true"
-          className={`absolute top-[calc(100%+6px)] z-30 rounded-xl border border-[#f0efed] bg-white shadow-xl ${
-            align === "right" ? "right-0" : "left-0"
-          } ${panelClassName ?? ""}`}
+          className={`absolute z-30 rounded-xl border border-[#f0efed] bg-white shadow-xl ${
+            side === "top" ? "bottom-[calc(100%+6px)]" : "top-[calc(100%+6px)]"
+          } ${align === "right" ? "right-0" : "left-0"} ${panelClassName ?? ""}`}
         >
           {children(() => setOpen(false))}
         </div>

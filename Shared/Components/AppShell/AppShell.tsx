@@ -15,9 +15,13 @@ import { SweepOrphanedMedia } from "@lockin/shared/Lib/MediaStorage";
 
 interface AppShellProps {
   children: ReactNode;
+  /** Volitelný obsah na patě sidebaru. Desktop nechává prázdné, web sem dává
+   * účet a odhlášení — slot je schválně obecný, aby Shared nemusel vědět,
+   * že nějaké přihlašování vůbec existuje. */
+  sidebarFooter?: ReactNode;
 }
 
-export function AppShell({ children }: AppShellProps) {
+export function AppShell({ children, sidebarFooter }: AppShellProps) {
   const sidebarCollapsed = UseUiStore((state) => state.sidebarCollapsed);
   const toggleSidebar = UseUiStore((state) => state.ToggleSidebar);
   const closeTodoSettings = UseUiStore((state) => state.CloseBlockSettings);
@@ -77,7 +81,7 @@ export function AppShell({ children }: AppShellProps) {
         * neposune obsah. */}
       {!sidebarCollapsed && (
         <Suspense fallback={<SidebarPlaceholder />}>
-          <Sidebar />
+          <Sidebar footer={sidebarFooter} />
         </Suspense>
       )}
       <div className="flex min-w-0 flex-1 flex-col">

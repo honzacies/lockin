@@ -359,7 +359,7 @@ function RenderSidebarSection({
   );
 }
 
-export function Sidebar() {
+export function Sidebar({ footer }: { footer?: ReactNode }) {
   const pathname = usePathname();
   const searchParams = useSearchParams();
   const router = useRouter();
@@ -617,6 +617,8 @@ export function Sidebar() {
         <Plus size={16} />
         New
       </Button>
+
+      {footer}
     </div>
   );
 }
