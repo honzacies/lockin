@@ -1,0 +1,503 @@
+@import "tailwindcss";
+@import "@heroui/styles";
+
+:root {
+  --background: #ffffff;
+  --foreground: #2c2c2b;
+}
+
+/* TabStrip.tsx — enough open tabs to overflow the topbar scrolls instead of
+ * pushing WindowControls off the edge of the window; the scrollbar itself
+ * stays hidden since a titlebar isn't where you'd expect to see one, same as
+ * a browser's own tab strip. */
+.no-scrollbar {
+  scrollbar-width: none;
+  -ms-overflow-style: none;
+}
+.no-scrollbar::-webkit-scrollbar {
+  display: none;
+}
+
+/* The hue slider's thumb (Components/DocumentView/StyleEditor/ColorPicker.tsx)
+ * — `appearance: none` on the input strips the OS default track but leaves
+ * the thumb itself unstyled without these vendor-prefixed rules, which
+ * Tailwind utility classes can't target directly. `--thumb-color` is set
+ * inline per-render to the currently selected hue. */
+.hue-slider-thumb::-webkit-slider-thumb {
+  appearance: none;
+  width: 16px;
+  height: 16px;
+  border-radius: 9999px;
+  background: var(--thumb-color, #2c2c2b);
+  border: 2px solid #fff;
+  box-shadow: 0 0 0 1px rgba(0, 0, 0, 0.15);
+  cursor: pointer;
+}
+.hue-slider-thumb::-moz-range-thumb {
+  width: 16px;
+  height: 16px;
+  border-radius: 9999px;
+  background: var(--thumb-color, #2c2c2b);
+  border: 2px solid #fff;
+  box-shadow: 0 0 0 1px rgba(0, 0, 0, 0.15);
+  cursor: pointer;
+}
+
+@theme inline {
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+  --font-sans: var(--font-inter);
+}
+
+body {
+  background: var(--background);
+  color: var(--foreground);
+}
+
+[contenteditable] {
+  cursor: text;
+}
+
+/* The browser default selection highlight is a saturated blue that also
+ * swaps the text to white — a light gray wash that keeps each run's own
+ * color reads calmer and matches the rest of the app's muted palette.
+ * Omitting `color` (rather than setting `color: inherit`) is deliberate:
+ * `::selection` only supports a handful of properties, and leaving it out
+ * entirely is what actually keeps the original text color instead of
+ * forcing a recompute through it. */
+.prose-editor ::selection {
+  background-color: rgba(44, 44, 43, 0.12);
+}
+
+/* The marquee zone (see BlockSelectionExtension.ts) wraps header/toolbar
+ * chrome (titles, chips, buttons) *and* the actual document editor together
+ * — the chrome itself should never be text-selectable, but the editor
+ * content and any input/textarea inside the zone still need normal
+ * selection to work. */
+[data-marquee-zone] {
+  user-select: none;
+}
+[data-marquee-zone] input,
+[data-marquee-zone] textarea,
+[data-marquee-zone] [contenteditable] {
+  user-select: text;
+}
+
+/* While a marquee/move drag is active (see BlockSelectionExtension.ts):
+ * - nothing on the page should be hoverable/clickable, so dragging across
+ *   e.g. a to-do task's checkbox or buttons mid-selection can't trigger them;
+ * - the browser's own text-selection highlight must not appear alongside
+ *   our marquee/decoration highlight. */
+body.lockin-block-dragging,
+body.lockin-block-dragging * {
+  pointer-events: none !important;
+  user-select: none !important;
+}
+
+/* The marquee rectangle itself — see CreateMarqueeOverlay in
+ * BlockSelectionExtension.ts. Position/size are set inline per-frame. */
+.marquee-box {
+  z-index: 9999;
+  pointer-events: none;
+  border: 1px solid rgba(0, 136, 255, 0.6);
+  background-color: rgba(0, 136, 255, 0.12);
+  border-radius: 2px;
+}
+
+/* Notion-style full-block highlight for a selection spanning multiple
+ * blocks — see Components/DocumentView/Editor/BlockSelectionExtension.ts.
+ * Painted as a padded overlay layer (an absolutely-positioned pseudo-element
+ * extending past the block's own edges) rather than a plain background —
+ * a plain background gets visually swallowed by blocks that already have
+ * their own opaque background (e.g. the to-do list card), so it needs to
+ * sit visibly on top instead. */
+.prose-editor .block-select-highlight,
+.prose-editor .block-being-moved {
+  position: relative;
+  border-radius: 8px;
+  /* `pointer-events: none` (below) stops descendants being *targeted*, but
+   * doesn't reliably stop the browser's native drag-to-select-text from
+   * highlighting their text anyway — that needs `user-select: none`
+   * specifically, on the block itself too, not just its descendants. */
+  user-select: none;
+}
+/* Nothing *inside* a selected/moving block should react to the pointer — no
+ * hover states, no accidental checkbox/button clicks, no native text
+ * selection — while it's sitting there highlighted. This has to target
+ * descendants only, not the block's own root element: giving the root
+ * itself `pointer-events: none` would make clicks on it hit-test straight
+ * through to `view.dom` instead, which our own logic reads as "clicked
+ * empty background" and would start a new marquee instead of grabbing the
+ * already-selected block to move it. */
+.prose-editor .block-select-highlight *,
+.prose-editor .block-being-moved * {
+  pointer-events: none;
+  user-select: none;
+}
+.prose-editor .block-select-highlight::after {
+  content: "";
+  position: absolute;
+  inset: -6px -10px;
+  background-color: rgba(35, 131, 226, 0.16);
+  box-shadow: 0 0 0 1px rgba(35, 131, 226, 0.4);
+  border-radius: 8px;
+  pointer-events: none;
+  z-index: 5;
+  transition: opacity 0.1s ease;
+}
+
+/* While a block is actively being dragged to reorder (see RunBlockMove and
+ * its `movingRange` plugin state), the plain selection highlight steps back
+ * — a floating clone now follows the cursor instead (see .block-drag-preview
+ * below), so the block left in its original spot reads as a faded
+ * placeholder marking where it came from, not the "real" dragged content. */
+body.lockin-block-moving .block-select-highlight::after {
+  opacity: 0;
+}
+.prose-editor .block-being-moved {
+  position: relative;
+  opacity: 0.35;
+  transition: opacity 0.1s ease;
+}
+
+/* The floating clone that follows the cursor while dragging — see
+ * CreateDragPreview in BlockSelectionExtension.ts. Position/size are set
+ * inline per-frame. This is the "lifted" look (background, padding, a lift
+ * shadow) that .block-being-moved used to carry directly on the in-place
+ * block — the source block's own styling (e.g. a non-solid to-do list has no
+ * background/padding of its own) isn't enough once it's floating outside its
+ * normal document flow, so the preview supplies its own card chrome instead
+ * of relying on the clone's original look. No rotation — it read as visually
+ * "off" sitting crooked next to the rest of the straight-edged document UI. */
+.block-drag-preview {
+  z-index: 10000;
+  pointer-events: none;
+  background-color: #ffffff;
+  padding: 10px 14px;
+  box-sizing: border-box;
+  box-shadow:
+    0 20px 40px -8px rgba(0, 0, 0, 0.3),
+    0 8px 16px -6px rgba(0, 0, 0, 0.2),
+    0 0 0 1px rgba(0, 136, 255, 0.4);
+  border-radius: 10px;
+  opacity: 0.96;
+}
+
+/* The floating tab clone that follows the cursor while reordering tabs —
+ * see CreateTabDragPreview in Components/AppShell/TabStrip.tsx. Position is
+ * set inline per-frame. Unlike .block-drag-preview above, the cloned tab
+ * already carries its own background/padding/border from its original
+ * classList, so this only needs to add the "lifted, floating" cue on top —
+ * a shadow, no corner rounding (square, matching the tab strip's own
+ * straight-edged look rather than the rounded block-drag preview). */
+.tab-drag-preview {
+  z-index: 10000;
+  pointer-events: none;
+  opacity: 0.9;
+  border-radius: 0;
+  box-shadow:
+    0 10px 24px -6px rgba(0, 0, 0, 0.25),
+    0 3px 8px -2px rgba(0, 0, 0, 0.15);
+}
+
+/* The floating task-row clone that follows the cursor while reordering
+ * to-do tasks — see CreateTaskDragPreview in
+ * Components/QuickNotes/TodoListView.tsx. Position is set inline per-frame.
+ * The cloned row already carries its own layout/text styling from its
+ * classList; this adds a background (rows are normally transparent, relying
+ * on the list's own background) plus the "lifted" shadow and rounded
+ * corners matching the row's own rounded-lg. */
+.task-drag-preview {
+  z-index: 10000;
+  pointer-events: none;
+  background-color: #ffffff;
+  opacity: 0.96;
+  border-radius: 8px;
+  box-shadow:
+    0 10px 24px -6px rgba(0, 0, 0, 0.25),
+    0 3px 8px -2px rgba(0, 0, 0, 0.15),
+    0 0 0 1px rgba(0, 0, 0, 0.04);
+}
+
+/* The reorder drop indicator line — see CreateDropIndicator in
+ * BlockSelectionExtension.ts. Position/size are set inline per-frame. */
+.drop-indicator {
+  z-index: 9999;
+  pointer-events: none;
+  height: 3px;
+  border-radius: 2px;
+  background: #0088ff;
+  box-shadow: 0 0 0 1px rgba(255, 255, 255, 0.8);
+}
+
+/* Tiptap block editor — a uniform gap between every top-level block
+ * (rather than each block type's own margin) so two adjacent selected
+ * blocks' highlight overlays (see .block-select-highlight above) never
+ * touch or overlap. Individual block types below now only set horizontal
+ * spacing/padding; vertical spacing is entirely this gap. */
+.prose-editor {
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+}
+
+/* Browsers resolve the UA default `font-weight: bolder` on <strong>/<b>
+ * *relative* to the surrounding computed weight (per the CSS spec's
+ * bolder/lighter mapping table) — inside a heading (already 600 below),
+ * that jumps straight to 900 instead of a normal 700, i.e. font-black
+ * instead of font-bold. Pinning an explicit weight sidesteps that keyword
+ * entirely, everywhere, regardless of what it's nested inside. */
+.prose-editor strong,
+.prose-editor b {
+  font-weight: 700;
+}
+
+.prose-editor p.is-editor-empty:first-child::before {
+  content: attr(data-placeholder);
+  float: left;
+  height: 0;
+  color: #91918e;
+  pointer-events: none;
+}
+
+.prose-editor h1 {
+  font-size: var(--ed-heading1-size, 30px);
+  font-weight: 600;
+  margin: 0;
+  color: var(--ed-heading1-color, inherit);
+  font-family: var(--ed-heading1-font, inherit);
+}
+
+.prose-editor h2 {
+  font-size: var(--ed-heading2-size, 24px);
+  font-weight: 600;
+  margin: 0;
+  color: var(--ed-heading2-color, inherit);
+  font-family: var(--ed-heading2-font, inherit);
+}
+
+.prose-editor h3 {
+  font-size: var(--ed-heading3-size, 20px);
+  font-weight: 600;
+  margin: 0;
+  color: var(--ed-heading3-color, inherit);
+  font-family: var(--ed-heading3-font, inherit);
+}
+
+.prose-editor p {
+  margin: 0;
+  color: var(--ed-paragraph-color, inherit);
+  font-family: var(--ed-paragraph-font, inherit);
+  font-size: var(--ed-paragraph-size, inherit);
+}
+
+.prose-editor a {
+  color: var(--ed-link-color, #3b7cff);
+  font-family: var(--ed-link-font, inherit);
+  font-size: var(--ed-link-size, inherit);
+  text-decoration: underline;
+  text-underline-offset: 2px;
+}
+
+.prose-editor ul,
+.prose-editor ol {
+  margin: 0;
+  padding-left: 24px;
+}
+
+/* Bulleted list — a plain <ul> that is neither dashed nor a task list. */
+.prose-editor ul:not([data-variant="dash"]):not([data-type="taskList"]) {
+  list-style: disc;
+  color: var(--ed-bulletList-color, inherit);
+  font-size: var(--ed-bulletList-size, inherit);
+  padding-left: var(--ed-bulletList-gap, 24px);
+}
+
+.prose-editor ul[data-variant="dash"] {
+  list-style: none;
+  color: var(--ed-dashedList-color, inherit);
+  font-size: var(--ed-dashedList-size, inherit);
+}
+
+.prose-editor ul[data-variant="dash"] > li {
+  position: relative;
+}
+
+.prose-editor ul[data-variant="dash"] > li::before {
+  content: "–";
+  position: absolute;
+  left: calc(-1 * var(--ed-dashedList-gap, 18px));
+  color: #91918e;
+}
+
+.prose-editor ol {
+  list-style: decimal;
+  color: var(--ed-numberedList-color, inherit);
+  font-size: var(--ed-numberedList-size, inherit);
+  padding-left: var(--ed-numberedList-gap, 24px);
+}
+
+.prose-editor blockquote {
+  margin: 0;
+  padding-left: 16px;
+  border-left: 3px solid #f0efed;
+  color: var(--ed-quote-color, #5f5e59);
+  font-family: var(--ed-quote-font, inherit);
+  font-size: var(--ed-quote-size, inherit);
+}
+
+.prose-editor pre {
+  margin: 0;
+  padding: 12px 16px;
+  border-radius: 8px;
+  background: var(--ed-codeBlock-bg, #f9f8f7);
+  border: 1px solid #f0efed;
+  color: var(--ed-codeBlock-color, inherit);
+  font-family: var(--ed-codeBlock-font, monospace);
+  font-size: var(--ed-codeBlock-size, 14px);
+  overflow-x: auto;
+}
+
+/* Inline code mark (single backtick, `text` — StarterKit's Code mark ships
+ * this input rule by default, it just had no styling at all). Excludes
+ * `pre code` so a code *block*'s own text isn't double-styled with this
+ * badge look on top of the block's own background. */
+.prose-editor code:not(pre code) {
+  background: #f9f8f7;
+  color: #e5484d;
+  border: 1px solid #f0efed;
+  border-radius: 4px;
+  padding: 1px 6px;
+  font-family: monospace;
+  font-size: 0.9em;
+}
+
+.prose-editor hr {
+  margin: 0 auto;
+  border: none;
+  border-top: var(--ed-divider-thickness, 1px) solid var(--ed-divider-color, #f0efed);
+  width: var(--ed-divider-width, 100%);
+}
+
+.prose-editor ul[data-type="taskList"] {
+  list-style: none;
+  padding-left: 4px;
+  color: var(--ed-todoList-color, inherit);
+  font-size: var(--ed-todoList-size, inherit);
+}
+
+.prose-editor ul[data-type="taskList"] li {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--ed-todoList-gap, 8px);
+}
+
+.prose-editor ul[data-type="taskList"] li > label {
+  margin-top: 4px;
+}
+
+.prose-editor ul[data-type="taskList"] li > div {
+  flex: 1;
+}
+
+/* Notion-style table — see TableNodeView.tsx / NotionTableExtension.ts.
+ * The extension applies `.selectedCell`/`.column-resize-handle`/
+ * `.resize-cursor` itself (not customizable class names), so those are
+ * targeted directly rather than via a class we control. */
+.prose-editor .lockin-table {
+  border-collapse: collapse;
+  margin: 0;
+  table-layout: fixed;
+  width: 100%;
+}
+
+.prose-editor .lockin-table td,
+.prose-editor .lockin-table th {
+  border: 1px solid #f0efed;
+  box-sizing: border-box;
+  min-width: 1em;
+  padding: 6px 10px;
+  position: relative;
+  vertical-align: top;
+  font-size: 14px;
+}
+
+.prose-editor .lockin-table th {
+  background-color: #f9f8f7;
+  font-weight: 600;
+  text-align: left;
+  color: #5f5e59;
+}
+
+.prose-editor .lockin-table tr:first-child th:first-child {
+  border-top-left-radius: 8px;
+}
+.prose-editor .lockin-table tr:first-child th:last-child {
+  border-top-right-radius: 8px;
+}
+
+.prose-editor .selectedCell::after {
+  background: rgba(0, 136, 255, 0.08);
+  content: "";
+  inset: 0;
+  pointer-events: none;
+  position: absolute;
+  z-index: 2;
+}
+
+.prose-editor .column-resize-handle {
+  background-color: #0088ff;
+  bottom: -2px;
+  pointer-events: none;
+  position: absolute;
+  right: -2px;
+  top: 0;
+  width: 3px;
+}
+
+.prose-editor.resize-cursor {
+  cursor: col-resize;
+}
+
+/* Spoiler mark (`||text||`) — see SpoilerExtension.ts. `.is-revealed` is
+ * toggled directly on the span by the extension's own click handler, not
+ * driven by React/document state — a spoiler always starts hidden again
+ * after a reload. */
+.prose-editor span[data-spoiler] {
+  background-color: #dcdad5;
+  color: transparent;
+  border-radius: 4px;
+  padding: 0 2px;
+  cursor: pointer;
+  user-select: none;
+  transition: background-color 0.15s ease;
+}
+.prose-editor span[data-spoiler]:hover {
+  background-color: #cac7c0;
+}
+.prose-editor span[data-spoiler].is-revealed {
+  background-color: rgba(44, 44, 43, 0.06);
+  color: inherit;
+  cursor: text;
+  user-select: text;
+}
+
+/* Document settings menu's "Adapt to-do lists & palettes" theme toggle
+ * (Lib/ColorAdapt.ts decides when it applies). TodoListView/ColorPaletteNodeView
+ * and code blocks are all built for a fixed light card surface and don't
+ * read document theme colors themselves — inverting is a blunt but
+ * genuinely automatic way to make them read against a dark custom
+ * background, at the cost of also flipping any hue the block already
+ * carries (accepted, opt-in tradeoff). Media inside gets a second,
+ * canceling invert so photos/videos stay normal. */
+.lockin-adapt-blocks [data-type="rich-todo-list"],
+.lockin-adapt-blocks [data-type="color-palette"],
+.lockin-adapt-blocks .prose-editor pre {
+  filter: invert(0.92) hue-rotate(180deg);
+}
+.lockin-adapt-blocks [data-type="rich-todo-list"] img,
+.lockin-adapt-blocks [data-type="color-palette"] img,
+.lockin-adapt-blocks [data-type="rich-todo-list"] video,
+.lockin-adapt-blocks [data-type="color-palette"] video {
+  filter: invert(1) hue-rotate(180deg);
+}
