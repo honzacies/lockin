@@ -7,6 +7,7 @@
  * souboru; při přidání WebBuild/ sem přibude další řádek. */
 @source "../";
 @source "../../TauriBuild";
+@source "../../WebBuild";
 
 :root {
   --background: #ffffff;

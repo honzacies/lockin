@@ -4,15 +4,20 @@
   "private": true,
   "workspaces": [
     "Shared",
-    "TauriBuild"
+    "TauriBuild",
+    "WebBuild"
   ],
   "scripts": {
-    "dev": "bun run --filter @lockin/tauri dev",
-    "build": "bun run --filter @lockin/tauri build",
-    "tauri:dev": "bun run --filter @lockin/tauri tauri:dev",
-    "tauri:build": "bun run --filter @lockin/tauri tauri:build",
-    "typecheck": "bun run --filter '*' typecheck",
-    "lint": "bun run --filter '*' lint"
+    "dev": "cd TauriBuild && bun run dev",
+    "build": "cd TauriBuild && bun run build",
+    "tauri:dev": "cd TauriBuild && bun run tauri:dev",
+    "tauri:build": "cd TauriBuild && bun run tauri:build",
+    "web:dev": "cd WebBuild && bun run dev",
+    "web:build": "cd WebBuild && bun run build",
+    "web:start": "cd WebBuild && bun run start",
+    "api:dev": "cd Api && bun run dev",
+    "api:build": "cd Api && bun run build",
+    "typecheck": "cd Shared && bun run typecheck && cd ../TauriBuild && bun run typecheck && cd ../WebBuild && bun run typecheck && cd ../Api && bun run typecheck"
   },
   "ignoreScripts": [
     "sharp",
