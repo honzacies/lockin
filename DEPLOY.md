@@ -80,12 +80,50 @@ docker compose version
 sudo mkdir -p /srv/lockin && sudo chown honza:honza /srv/lockin
 ```
 
+Repozitář je na GitHubu a je **private**, takže se na něj server musí umět
+autentizovat. Správná cesta je **deploy key** — čtecí klíč vázaný na jeden
+repozitář, ne na celý účet. Kdyby se server kompromitoval, útočník dostane
+tenhle jeden repozitář, ne všechno.
+
+Vygeneruj klíč na serveru, bez hesla (aby `git pull` v cronu nezasekl):
+
 ```bash
-git clone <adresa-repozitáře> /srv/lockin
+ssh-keygen -t ed25519 -C "lockin-deploy" -f ~/.ssh/lockin_deploy -N ""
 ```
 
-Repozitář zatím nikde nevisí — buď ho nahraj na GitHub jako `honzacies/lockin`,
-nebo přenes rovnou přes `rsync -avz --exclude node_modules ./ honza@91.99.239.107:/srv/lockin/`.
+```bash
+cat ~/.ssh/lockin_deploy.pub
+```
+
+Veřejnou půlku vlož na GitHubu do **`Settings → Deploy keys → Add deploy key`**
+u repozitáře (ne do `Settings → SSH and GPG keys`, to je osobní klíč pro celý
+účet). **„Allow write access" nech nezaškrtnuté** — server má jen číst.
+
+Do `~/.ssh/config` přidej alias:
+
+```
+Host github-lockin
+    HostName github.com
+    User git
+    IdentityFile ~/.ssh/lockin_deploy
+    IdentitiesOnly yes
+```
+
+`IdentitiesOnly yes` je podstatné: bez něj SSH nabídne všechny klíče, co na
+stroji jsou, GitHub ho odmítne dřív, než dojde na ten správný, a hlásí to jako
+chybu oprávnění.
+
+Ověř a klonuj:
+
+```bash
+ssh -T git@github-lockin
+```
+
+```bash
+git clone git@github-lockin:honzacies/lockin.git /srv/lockin
+```
+
+Aktualizace v kroku 12 pak jedou bez dalšího přihlašování.
 
 ## 5. Konfigurace
 
