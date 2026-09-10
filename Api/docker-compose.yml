@@ -52,6 +52,23 @@ services:
     networks:
       - lockin
 
+  web:
+    build:
+      # Kontext je kořen repozitáře — web potřebuje i Shared/.
+      context: ..
+      dockerfile: WebBuild/Dockerfile
+      args:
+        # NEXT_PUBLIC_* se zapéká do bundlu při buildu, ne za běhu — proto
+        # jako build arg, ne jako environment.
+        NEXT_PUBLIC_API_URL: ${PUBLIC_API_URL:?PUBLIC_API_URL musí být nastavené}
+    restart: unless-stopped
+    depends_on:
+      - api
+    ports:
+      - "127.0.0.1:3001:3000"
+    networks:
+      - lockin
+
 volumes:
   postgres-data:
   media-data:
