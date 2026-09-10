@@ -17,3 +17,9 @@
 # Lockfily se needitují ručně — ať je diff v code review sbalený
 bun.lock linguist-generated=true
 Cargo.lock linguist-generated=true
+
+# SQL musí být čisté UTF-8 bez BOM. Postgres BOM nesní a spadne na
+# `syntax error at or near ""` hned na prvním znaku — stalo se, když se
+# migrace generovala přes PowerShell `Out-File -Encoding utf8`, což ve
+# Windows PowerShell 5.1 znamená UTF-8 *s* BOM.
+*.sql text eol=lf working-tree-encoding=UTF-8
