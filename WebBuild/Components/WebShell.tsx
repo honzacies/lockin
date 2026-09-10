@@ -12,6 +12,7 @@ import { AppShell } from "@lockin/shared/Components/AppShell/AppShell";
 import { GetSessionUser, OnSessionChange, type SessionUser } from "@/Platform/Session";
 import { AccountMenu } from "./AccountMenu";
 import { PassphraseGate } from "./PassphraseGate";
+import { BetaNotice } from "./BetaNotice";
 import { MigrationPrompt } from "./MigrationPrompt";
 
 /**
@@ -69,7 +70,12 @@ export function WebShell({ children }: { children: ReactNode }) {
   }, [ready, user, isPublic, router]);
 
   if (isPublic) {
-    return <div className="flex min-h-screen flex-col bg-white">{children}</div>;
+    return (
+      <div className="flex min-h-screen flex-col bg-white">
+        {children}
+        <BetaNotice />
+      </div>
+    );
   }
 
   // Než se přečte localStorage, není jisté, jestli je uživatel přihlášený —
@@ -82,9 +88,12 @@ export function WebShell({ children }: { children: ReactNode }) {
   // PassphraseGate stojí NAD AppShellem schválně: ten při připojení spustí
   // načítání dat, a to by bez odemčeného klíče stejně nešlo dešifrovat.
   return (
-    <PassphraseGate>
-      <AppShell sidebarFooter={<AccountMenu />}>{children}</AppShell>
-      {user ? <MigrationPrompt user={user} /> : null}
-    </PassphraseGate>
+    <>
+      <PassphraseGate>
+        <AppShell sidebarFooter={<AccountMenu />}>{children}</AppShell>
+        {user ? <MigrationPrompt user={user} /> : null}
+      </PassphraseGate>
+      <BetaNotice />
+    </>
   );
 }

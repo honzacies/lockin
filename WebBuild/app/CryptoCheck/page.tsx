@@ -41,9 +41,9 @@ export default function CryptoCheckPage() {
 
   return (
     <div className="flex min-h-screen flex-col gap-4 bg-white px-[50px] pt-10">
-      <p className="text-[32px] font-medium tracking-[-0.6px] text-black">Kontrola šifrování</p>
+      <p className="text-[32px] font-medium tracking-[-0.6px] text-black">Encryption self-check</p>
       {running ? (
-        <p className="text-sm text-[#91918e]">Běží… odvození klíče je schválně pomalé.</p>
+        <p className="text-sm text-[#91918e]">Running… key derivation is slow on purpose.</p>
       ) : null}
       <div className="flex flex-col gap-1.5">
         {results.map((result) => (
@@ -64,8 +64,8 @@ export default function CryptoCheckPage() {
       {!running && results.length > 0 ? (
         <p className="text-sm font-medium text-[#2c2c2b]">
           {results.every((r) => r.ok)
-            ? "Všechno prošlo."
-            : `Selhalo ${results.filter((r) => !r.ok).length} z ${results.length}.`}
+            ? "All checks passed."
+            : `${results.filter((r) => !r.ok).length} of ${results.length} failed.`}
         </p>
       ) : null}
     </div>
@@ -81,13 +81,13 @@ async function Run(): Promise<Result[]> {
     const record = await CreateWrappedKey("prvni-passphrase-123");
     const derivationMs = Math.round(performance.now() - started);
     Add(
-      "Argon2id ve WASM funguje",
+      "Argon2id runs in WASM",
       true,
-      `odvození klíče trvalo ${derivationMs} ms (má být stovky ms, ne jednotky)`,
+      `key derivation took ${derivationMs} ms (should be hundreds, not single digits)`,
     );
 
     const key = await UnwrapKey("prvni-passphrase-123", record);
-    Add("Odemčení správnou passphrase", true, "hlavní klíč se rozbalil");
+    Add("Unlocks with the right passphrase", true, "master key unwrapped");
 
     let rejected = false;
     try {
@@ -96,25 +96,25 @@ async function Run(): Promise<Result[]> {
       rejected = true;
     }
     Add(
-      "Špatná passphrase je odmítnutá",
+      "Wrong passphrase is rejected",
       rejected,
-      rejected ? "AES-GCM neověřil značku, jak má" : "PROŠLA — to je vážná chyba",
+      rejected ? "AES-GCM refused the tag, as it should" : "IT PASSED — that is a serious bug",
     );
 
-    const document = { name: "Tajný dokument", text: { json: { type: "doc" } } };
+    const document = { name: "Secret document", text: { json: { type: "doc" } } };
     const sealed = await SealJson(key, document);
     const opened = await OpenJson<typeof document>(key, sealed);
     Add(
-      "Dokument se zašifruje a otevře",
+      "Document seals and opens",
       opened.name === document.name,
-      `ciphertext ${sealed.ciphertext.length} znaků, název sedí po dešifrování`,
+      `ciphertext ${sealed.ciphertext.length} chars, title matches after decrypt`,
     );
 
-    const leaks = sealed.ciphertext.includes(btoa("Tajný")) || sealed.ciphertext.includes("Tajn");
+    const leaks = sealed.ciphertext.includes(btoa("Secret")) || sealed.ciphertext.includes("Secret");
     Add(
-      "V ciphertextu není čitelný název",
+      "No readable title in the ciphertext",
       !leaks,
-      leaks ? "název PROSAKUJE" : "žádný čitelný zbytek",
+      leaks ? "the title LEAKS" : "nothing readable left behind",
     );
 
     // Jádro celého návrhu: změna passphrase nesmí znehodnotit už zašifrovaná data.
@@ -122,9 +122,9 @@ async function Run(): Promise<Result[]> {
     const keyAfterChange = await UnwrapKey("druha-passphrase-456", rewrapped);
     const openedAfterChange = await OpenJson<typeof document>(keyAfterChange, sealed);
     Add(
-      "Po změně passphrase jdou stará data otevřít",
+      "Old data still opens after a passphrase change",
       openedAfterChange.name === document.name,
-      "hlavní klíč zůstal stejný, přebalil se jen jeho obal",
+      "master key stayed the same, only its wrapper was replaced",
     );
 
     let oldRejected = false;
@@ -134,21 +134,21 @@ async function Run(): Promise<Result[]> {
       oldRejected = true;
     }
     Add(
-      "Stará passphrase po změně neplatí",
+      "Old passphrase stops working after the change",
       oldRejected,
-      oldRejected ? "odmítnuta" : "PROŠLA — to je vážná chyba",
+      oldRejected ? "rejected" : "IT PASSED — that is a serious bug",
     );
 
-    const file = new File([new Uint8Array([1, 2, 3, 4, 5])], "foto.png", { type: "image/png" });
+    const file = new File([new Uint8Array([1, 2, 3, 4, 5])], "photo.png", { type: "image/png" });
     const sealedFile = await SealFile(key, file);
     const openedFile = await OpenFile(key, await sealedFile.arrayBuffer());
     Add(
-      "Soubor se zašifruje i s názvem a typem",
-      openedFile.name === "foto.png" && openedFile.type === "image/png",
-      `po dešifrování: ${openedFile.name}, ${openedFile.type}`,
+      "File seals together with its name and type",
+      openedFile.name === "photo.png" && openedFile.type === "image/png",
+      `after decrypt: ${openedFile.name}, ${openedFile.type}`,
     );
   } catch (error) {
-    Add("Neočekávaná chyba", false, error instanceof Error ? error.message : String(error));
+    Add("Unexpected error", false, error instanceof Error ? error.message : String(error));
   }
 
   return out;

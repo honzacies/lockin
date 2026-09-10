@@ -34,7 +34,7 @@ export function AdminMetrics() {
         }
       } catch (caught) {
         if (!cancelled) {
-          setError(caught instanceof Error ? caught.message : "Metriky se nenačetly.");
+          setError(caught instanceof Error ? caught.message : "Could not load metrics.");
         }
       }
     };
@@ -68,7 +68,7 @@ export function AdminMetrics() {
   return (
     <div className="flex flex-col gap-3">
       <span className="text-[10px] font-semibold uppercase tracking-wider text-[#a5a49f]">
-        Zdroje serveru
+        Server resources
       </span>
 
       <div className="grid grid-cols-2 gap-1.5 lg:grid-cols-4">
@@ -77,17 +77,17 @@ export function AdminMetrics() {
             {FormatUptime(system.uptime.process)}
           </p>
           <p className="text-xs text-[#91918e]">
-            server {FormatUptime(system.uptime.system)}
+            host {FormatUptime(system.uptime.system)}
           </p>
         </Tile>
 
-        <Tile icon={<MemoryStick size={14} strokeWidth={1.75} />} label="RAM">
+        <Tile icon={<MemoryStick size={14} strokeWidth={1.75} />} label="Memory">
           <p className="text-[20px] font-medium text-[#2c2c2b]">
             {FormatBytes(system.memory.used)}
           </p>
           <Bar percent={memoryPercent} />
           <p className="text-xs text-[#91918e]">
-            z {FormatBytes(system.memory.total)} · API {FormatBytes(system.memory.processRss)}
+            of {FormatBytes(system.memory.total)} · API {FormatBytes(system.memory.processRss)}
           </p>
         </Tile>
 
@@ -99,40 +99,40 @@ export function AdminMetrics() {
               </p>
               <Bar percent={diskPercent ?? 0} />
               <p className="text-xs text-[#91918e]">
-                volno {FormatBytes(system.disk.free)}
+                {FormatBytes(system.disk.free)} free
               </p>
             </>
           ) : (
             // statfs není na Windows k dispozici — ve vývoji tedy chybí.
-            <p className="text-xs text-[#91918e]">Nedostupné na tomhle systému.</p>
+            <p className="text-xs text-[#91918e]">Not available on this system.</p>
           )}
         </Tile>
 
-        <Tile icon={<Cpu size={14} strokeWidth={1.75} />} label="Zátěž">
+        <Tile icon={<Cpu size={14} strokeWidth={1.75} />} label="Load">
           <p className="text-[20px] font-medium text-[#2c2c2b]">
-            {system.load.one.toFixed(2).replace(".", ",")}
+            {system.load.one.toFixed(2)}
           </p>
           <p className="text-xs text-[#91918e]">
-            5 min {system.load.five.toFixed(2).replace(".", ",")} · 15 min{" "}
-            {system.load.fifteen.toFixed(2).replace(".", ",")}
+            5m {system.load.five.toFixed(2)} · 15m{" "}
+            {system.load.fifteen.toFixed(2)}
           </p>
         </Tile>
       </div>
 
       <div className="grid grid-cols-2 gap-1.5 lg:grid-cols-4">
-        <Tile icon={<Users size={14} strokeWidth={1.75} />} label="Uživatelé">
+        <Tile icon={<Users size={14} strokeWidth={1.75} />} label="Users">
           <p className="text-[20px] font-medium text-[#2c2c2b]">{counts.users}</p>
         </Tile>
-        <Tile icon={<HardDrive size={14} strokeWidth={1.75} />} label="Média">
+        <Tile icon={<HardDrive size={14} strokeWidth={1.75} />} label="Media">
           <p className="text-[20px] font-medium text-[#2c2c2b]">
             {FormatBytes(storage.mediaBytes)}
           </p>
-          <p className="text-xs text-[#91918e]">{storage.mediaFiles} souborů</p>
+          <p className="text-xs text-[#91918e]">{storage.mediaFiles} files</p>
         </Tile>
-        <Tile icon={<Activity size={14} strokeWidth={1.75} />} label="Dokumenty">
+        <Tile icon={<Activity size={14} strokeWidth={1.75} />} label="Documents">
           <p className="text-[20px] font-medium text-[#2c2c2b]">{counts.documents}</p>
         </Tile>
-        <Tile icon={<Activity size={14} strokeWidth={1.75} />} label="Projekty">
+        <Tile icon={<Activity size={14} strokeWidth={1.75} />} label="Projects">
           <p className="text-[20px] font-medium text-[#2c2c2b]">{counts.projects}</p>
         </Tile>
       </div>

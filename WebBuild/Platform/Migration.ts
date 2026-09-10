@@ -74,7 +74,7 @@ export async function MigrateLocalDataToAccount(
   for (const oldPath of mediaKeys) {
     const stored = await DbGet<StoredMedia>(STORE_MEDIA, oldPath);
     if (!stored) {
-      Report("médium přeskočeno");
+      Report("media file skipped");
       continue;
     }
     const name = oldPath.split("/").pop() ?? "media";
@@ -87,13 +87,13 @@ export async function MigrateLocalDataToAccount(
   // 2) Dokumenty s přepsanými cestami k médiím.
   for (const doc of documents) {
     await ApiDataStorage.SaveDocument(RemapMediaPaths(doc, pathMap));
-    Report(doc.name || "dokument");
+    Report(doc.name || "document");
   }
 
   // 3) Projekty až nakonec — odkazují na dokumenty.
   for (const project of projects) {
     await ApiDataStorage.SaveProject(project as Project);
-    Report(project.name || "projekt");
+    Report(project.name || "project");
   }
 
   // 4) Teprve když všechno prošlo, uklidit prohlížeč.

@@ -71,14 +71,14 @@ app.setErrorHandler((error: FastifyError, request, reply) => {
   // V produkci se ven neposílá vnitřní hláška — mohla by prozradit strukturu
   // databáze nebo cesty na disku.
   const message =
-    status >= 500 && IsProduction ? "Někde se to rozbilo. Zkus to prosím znovu." : error.message;
+    status >= 500 && IsProduction ? "Something went wrong. Please try again." : error.message;
   reply.code(status).send({ error: message });
 });
 
 async function Start(): Promise<void> {
   try {
     await app.listen({ port: Env.PORT, host: Env.HOST });
-    app.log.info(`LockIn API běží na ${Env.HOST}:${Env.PORT}`);
+    app.log.info(`LockIn API listening on ${Env.HOST}:${Env.PORT}`);
   } catch (error) {
     app.log.error(error);
     process.exit(1);
@@ -87,7 +87,7 @@ async function Start(): Promise<void> {
 
 for (const signal of ["SIGINT", "SIGTERM"] as const) {
   process.on(signal, () => {
-    app.log.info(`${signal} — vypínám`);
+    app.log.info(`${signal} — shutting down`);
     app.close().then(() => process.exit(0));
   });
 }

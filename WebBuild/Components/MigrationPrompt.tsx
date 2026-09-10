@@ -65,7 +65,7 @@ export function MigrationPrompt({ user }: { user: SessionUser }) {
       setError(
         caught instanceof Error
           ? caught.message
-          : "Nahrávání se nepovedlo. Data zůstala v prohlížeči, zkus to znovu.",
+          : "The upload failed. Your data is still in this browser — you can try again.",
       );
     }
   }
@@ -89,24 +89,24 @@ export function MigrationPrompt({ user }: { user: SessionUser }) {
         <div className="flex items-center gap-2">
           <CloudUpload size={16} strokeWidth={1.75} className="text-[#0088ff]" />
           <span className="text-[10px] font-semibold uppercase tracking-wider text-[#a5a49f]">
-            Nalezena lokální data
+            Local data found
           </span>
         </div>
 
         <p className="text-[13px] leading-relaxed text-[#2c2c2b]">
-          V tomhle prohlížeči máš{" "}
+          This browser holds{" "}
           <strong>
-            {summary.documents} {Plural(summary.documents, "dokument", "dokumenty", "dokumentů")}
+            {summary.documents} {summary.documents === 1 ? "document" : "documents"}
           </strong>
           {summary.projects > 0 ? (
             <>
-              {" a "}
+              {" and "}
               <strong>
-                {summary.projects} {Plural(summary.projects, "projekt", "projekty", "projektů")}
+                {summary.projects} {summary.projects === 1 ? "project" : "projects"}
               </strong>
             </>
           ) : null}
-          . Nahrát je na účet <strong>{user.username}</strong>?
+          . Upload it to <strong>{user.username}</strong>?
         </p>
 
         {busy ? (
@@ -136,14 +136,14 @@ export function MigrationPrompt({ user }: { user: SessionUser }) {
               onPress={HandleUpload}
               className="h-auto flex-1 justify-center rounded-lg bg-black px-3 py-1.5 text-[13px] font-normal text-white"
             >
-              Nahrát na účet
+              Upload to account
             </Button>
             <Button
               variant="ghost"
               onPress={HandleLater}
               className="h-auto rounded-lg border border-[#f0efed] px-3 py-1.5 text-[13px] font-normal text-[#5f5e59] hover:border-[#c9c8c4]"
             >
-              Později
+              Later
             </Button>
           </div>
         ) : null}
@@ -154,7 +154,7 @@ export function MigrationPrompt({ user }: { user: SessionUser }) {
             onClick={HandleDiscard}
             className="self-start text-xs font-normal text-[#91918e] underline underline-offset-2 hover:text-[#e5484d]"
           >
-            Smazat lokální data
+            Delete local data
           </button>
         ) : null}
       </div>
@@ -162,9 +162,3 @@ export function MigrationPrompt({ user }: { user: SessionUser }) {
   );
 }
 
-/** 1 dokument / 2–4 dokumenty / 5+ dokumentů */
-function Plural(count: number, one: string, few: string, many: string): string {
-  if (count === 1) return one;
-  if (count >= 2 && count <= 4) return few;
-  return many;
-}

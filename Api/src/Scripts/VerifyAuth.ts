@@ -30,7 +30,7 @@ async function Main(): Promise<void> {
   // znamená to, že hook request nezastavil.
   await app.register(async (scope) => {
     scope.addHook("preHandler", scope.Authenticate);
-    scope.get("/chraneno", async () => {
+    scope.get("/protected", async () => {
       handlerReached = true;
       return { ok: true };
     });
@@ -61,32 +61,32 @@ async function Main(): Promise<void> {
     assert.equal(
       response.statusCode,
       expectedStatus,
-      `${label}: čekal jsem ${expectedStatus}, dostal ${response.statusCode}`,
+      `${label}: expected ${expectedStatus}, got ${response.statusCode}`,
     );
     assert.equal(
       handlerReached,
       expectHandler,
-      `${label}: handler ${handlerReached ? "SE SPUSTIL" : "se nespustil"}, ale neměl`,
+      `${label}: handler ${handlerReached ? "RAN" : "did not run"} when it should not have`,
     );
     console.log(`  ✓ ${label} → ${response.statusCode}`);
   };
 
-  console.log("\nOvěření autorizace API\n");
+  console.log("\nAPI authorization check\n");
 
-  await Check("bez tokenu", { method: "GET", url: "/chraneno" }, 401, false);
+  await Check("no token", { method: "GET", url: "/protected" }, 401, false);
 
   await Check(
-    "s nesmyslným tokenem",
-    { method: "GET", url: "/chraneno", headers: { authorization: "Bearer neco-spatneho" } },
+    "garbage token",
+    { method: "GET", url: "/protected", headers: { authorization: "Bearer not-a-real-token" } },
     401,
     false,
   );
 
   await Check(
-    "s tokenem podepsaným cizím klíčem",
+    "token signed with a different secret",
     {
       method: "GET",
-      url: "/chraneno",
+      url: "/protected",
       headers: {
         // Podepsáno jiným tajemstvím — struktura sedí, podpis ne.
         authorization:
@@ -101,33 +101,33 @@ async function Main(): Promise<void> {
   const adminToken = app.jwt.sign({ sub: "a1", username: "admin", role: "ADMIN" });
 
   await Check(
-    "s platným tokenem",
-    { method: "GET", url: "/chraneno", headers: { authorization: `Bearer ${userToken}` } },
+    "valid token",
+    { method: "GET", url: "/protected", headers: { authorization: `Bearer ${userToken}` } },
     200,
     true,
   );
 
-  await Check("admin route bez tokenu", { method: "GET", url: "/admin-only" }, 401, false);
+  await Check("admin route, no token", { method: "GET", url: "/admin-only" }, 401, false);
 
   await Check(
-    "admin route s běžným uživatelem",
+    "admin route as a regular user",
     { method: "GET", url: "/admin-only", headers: { authorization: `Bearer ${userToken}` } },
     403,
     false,
   );
 
   await Check(
-    "admin route s adminem",
+    "admin route as an admin",
     { method: "GET", url: "/admin-only", headers: { authorization: `Bearer ${adminToken}` } },
     200,
     true,
   );
 
   await app.close();
-  console.log("\nVšechno prošlo — neautorizovaný request se k handleru nedostane.\n");
+  console.log("\nAll good — unauthorized requests never reach a handler.\n");
 }
 
 Main().catch((error) => {
-  console.error("\nSELHALO:", error instanceof Error ? error.message : error, "\n");
+  console.error("\nFAILED:", error instanceof Error ? error.message : error, "\n");
   process.exit(1);
 });

@@ -1,36 +1,33 @@
 "use client";
 
-import { useRouter } from "next/navigation";
 import { AuthForm, AuthLink } from "@/Components/AuthForm";
 import { ApiPostPublic } from "@/Platform/ApiClient";
 import { SetSession, type SessionUser } from "@/Platform/Session";
 
 export default function RegisterPage() {
-  const router = useRouter();
-
   return (
     <AuthForm
-      title="Registrace"
-      subtitle="LockIn je zatím na pozvánky."
-      submitLabel="Vytvořit účet"
+      title="Create account"
+      subtitle="LockIn is invite-only for now."
+      submitLabel="Create account"
       fields={[
         {
           name: "username",
-          label: "Uživatelské jméno",
+          label: "Username",
           type: "text",
           autoComplete: "username",
-          hint: "Aspoň 3 znaky, jen písmena, číslice a . _ -",
+          hint: "At least 3 characters. Letters, digits and . _ - only.",
         },
         {
           name: "password",
-          label: "Heslo",
+          label: "Password",
           type: "password",
           autoComplete: "new-password",
-          hint: "Aspoň 8 znaků.",
+          hint: "At least 8 characters.",
         },
         {
           name: "inviteCode",
-          label: "Invite kód",
+          label: "Invite code",
           type: "text",
           placeholder: "LOCKIN-XXXX-XXXX",
         },
@@ -56,7 +53,7 @@ export default function RegisterPage() {
       }}
       footer={
         <>
-          Účet už máš? <AuthLink href="/Login">Přihlas se</AuthLink>
+          Already have an account? <AuthLink href="/Login">Sign in</AuthLink>
         </>
       }
     />

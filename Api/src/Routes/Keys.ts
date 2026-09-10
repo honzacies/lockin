@@ -9,7 +9,7 @@ import type { FastifyInstance } from "fastify";
  * odvození klíče i obalení probíhá výhradně v prohlížeči.
  */
 
-const Base64 = z.string().min(1).max(4096).regex(/^[A-Za-z0-9+/]+={0,2}$/, "Očekává se base64");
+const Base64 = z.string().min(1).max(4096).regex(/^[A-Za-z0-9+/]+={0,2}$/, "Expected base64");
 
 const KeyBody = z.object({
   salt: Base64,
@@ -29,7 +29,7 @@ export async function KeyRoutes(app: FastifyInstance): Promise<void> {
     const key = await app.prisma.userKey.findUnique({
       where: { userId: request.user.sub },
     });
-    if (!key) return reply.code(404).send({ error: "Passphrase ještě není nastavená." });
+    if (!key) return reply.code(404).send({ error: "No passphrase has been set up yet." });
 
     return reply.send({
       salt: key.salt,
@@ -51,7 +51,7 @@ export async function KeyRoutes(app: FastifyInstance): Promise<void> {
   app.post("/keys/me", async (request, reply) => {
     const parsed = KeyBody.safeParse(request.body);
     if (!parsed.success) {
-      return reply.code(400).send({ error: parsed.error.issues[0]?.message ?? "Neplatný klíč." });
+      return reply.code(400).send({ error: parsed.error.issues[0]?.message ?? "Invalid key." });
     }
 
     const existing = await app.prisma.userKey.findUnique({
@@ -60,7 +60,7 @@ export async function KeyRoutes(app: FastifyInstance): Promise<void> {
     if (existing) {
       return reply
         .code(409)
-        .send({ error: "Passphrase už je nastavená. Ke změně slouží PUT /keys/me." });
+        .send({ error: "A passphrase is already set. Use PUT /keys/me to change it." });
     }
 
     await app.prisma.userKey.create({
@@ -80,16 +80,16 @@ export async function KeyRoutes(app: FastifyInstance): Promise<void> {
   app.put("/keys/me", async (request, reply) => {
     const parsed = KeyBody.extend({ password: z.string().min(1) }).safeParse(request.body);
     if (!parsed.success) {
-      return reply.code(400).send({ error: parsed.error.issues[0]?.message ?? "Neplatný vstup." });
+      return reply.code(400).send({ error: parsed.error.issues[0]?.message ?? "Invalid input." });
     }
     const { password, ...key } = parsed.data;
 
     const user = await app.prisma.user.findUnique({ where: { id: request.user.sub } });
-    if (!user) return reply.code(404).send({ error: "Uživatel neexistuje." });
+    if (!user) return reply.code(404).send({ error: "No such user." });
 
     const { VerifyPassword } = await import("../Lib/Password.js");
     if (!(await VerifyPassword(user.passwordHash, password))) {
-      return reply.code(401).send({ error: "Špatné heslo k účtu." });
+      return reply.code(401).send({ error: "Wrong account password." });
     }
 
     await app.prisma.userKey.update({

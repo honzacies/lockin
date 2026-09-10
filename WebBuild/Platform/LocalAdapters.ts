@@ -77,10 +77,10 @@ const MAX_LOCAL_BYTES = 50 * 1024 * 1024;
 export const LocalMedia: MediaAdapter = {
   async Save(file) {
     if (!file.type.startsWith("image/") && !file.type.startsWith("video/")) {
-      throw new Error("Nahrát jde jen obrázek nebo video.");
+      throw new Error("Only images and videos can be uploaded.");
     }
     if (file.size > MAX_LOCAL_BYTES) {
-      throw new Error("Soubor je moc velký (max 50 MB).");
+      throw new Error("That file is too large (50 MB max).");
     }
     const extension = file.name.includes(".") ? file.name.slice(file.name.lastIndexOf(".")) : "";
     const path = `Media/media-${Date.now()}-${Math.random().toString(36).slice(2, 8)}${extension}`;

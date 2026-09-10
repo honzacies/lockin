@@ -17,27 +17,27 @@ async function Main(): Promise<void> {
 
   const existingAdmin = await prisma.user.findFirst({ where: { role: "ADMIN" } });
   if (existingAdmin) {
-    console.log(`Admin už existuje: ${existingAdmin.username}`);
-    const answer = await rl.question("Založit dalšího? [a/N] ");
-    if (answer.toLowerCase() !== "a") {
+    console.log(`An admin already exists: ${existingAdmin.username}`);
+    const answer = await rl.question("Create another one? [y/N] ");
+    if (answer.toLowerCase() !== "y") {
       rl.close();
       await prisma.$disconnect();
       return;
     }
   }
 
-  const username = (await rl.question("Uživatelské jméno: ")).trim();
-  const password = (await rl.question("Heslo (min. 8 znaků): ")).trim();
+  const username = (await rl.question("Username: ")).trim();
+  const password = (await rl.question("Password (8 characters min): ")).trim();
   rl.close();
 
   if (username.length < 3 || password.length < 8) {
-    console.error("Jméno musí mít aspoň 3 znaky a heslo aspoň 8.");
+    console.error("Username needs 3+ characters and password 8+.");
     process.exit(1);
   }
 
   const taken = await prisma.user.findUnique({ where: { username } });
   if (taken) {
-    console.error("Tohle jméno je už obsazené.");
+    console.error("That username is taken.");
     process.exit(1);
   }
 
@@ -47,10 +47,10 @@ async function Main(): Promise<void> {
 
   // Rovnou i první invite kód, ať je s čím začít.
   const code = GenerateInviteCode();
-  await prisma.inviteCode.create({ data: { code, note: "první kód ze seedu" } });
+  await prisma.inviteCode.create({ data: { code, note: "first code from seed" } });
 
-  console.log(`\nAdmin ${user.username} založen.`);
-  console.log(`První invite kód: ${code}\n`);
+  console.log(`\nAdmin ${user.username} created.`);
+  console.log(`First invite code: ${code}\n`);
 
   await prisma.$disconnect();
 }

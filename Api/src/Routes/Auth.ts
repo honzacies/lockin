@@ -7,11 +7,11 @@ import { Env } from "../Env.js";
 const RegisterBody = z.object({
   username: z
     .string()
-    .min(3, "Uživatelské jméno musí mít aspoň 3 znaky")
+    .min(3, "Username must be at least 3 characters")
     .max(32)
-    .regex(/^[a-zA-Z0-9_.-]+$/, "Povolená jsou jen písmena, číslice a . _ -"),
-  password: z.string().min(8, "Heslo musí mít aspoň 8 znaků").max(200),
-  inviteCode: z.string().min(1, "Invite kód je povinný"),
+    .regex(/^[a-zA-Z0-9_.-]+$/, "Only letters, digits and . _ - are allowed"),
+  password: z.string().min(8, "Password must be at least 8 characters").max(200),
+  inviteCode: z.string().min(1, "An invite code is required"),
 });
 
 const LoginBody = z.object({
@@ -36,13 +36,13 @@ export async function AuthRoutes(app: FastifyInstance): Promise<void> {
   app.post("/auth/register", async (request, reply) => {
     const parsed = RegisterBody.safeParse(request.body);
     if (!parsed.success) {
-      return reply.code(400).send({ error: parsed.error.issues[0]?.message ?? "Neplatný vstup." });
+      return reply.code(400).send({ error: parsed.error.issues[0]?.message ?? "Invalid input." });
     }
     const { username, password, inviteCode } = parsed.data;
 
     const existing = await app.prisma.user.findUnique({ where: { username } });
     if (existing) {
-      return reply.code(409).send({ error: "Uživatelské jméno je obsazené." });
+      return reply.code(409).send({ error: "That username is taken." });
     }
 
     const passwordHash = await HashPassword(password);
@@ -85,7 +85,7 @@ export async function AuthRoutes(app: FastifyInstance): Promise<void> {
       if (error instanceof Error && error.message === "INVALID_INVITE") {
         return reply
           .code(400)
-          .send({ error: "Invite kód je neplatný, už použitý nebo mu vypršela platnost." });
+          .send({ error: "That invite code is invalid, already used, or expired." });
       }
       throw error;
     }
@@ -94,7 +94,7 @@ export async function AuthRoutes(app: FastifyInstance): Promise<void> {
   app.post("/auth/login", async (request, reply) => {
     const parsed = LoginBody.safeParse(request.body);
     if (!parsed.success) {
-      return reply.code(400).send({ error: "Vyplň jméno i heslo." });
+      return reply.code(400).send({ error: "Enter both a username and a password." });
     }
     const { username, password } = parsed.data;
 
@@ -108,7 +108,7 @@ export async function AuthRoutes(app: FastifyInstance): Promise<void> {
     const valid = await VerifyPassword(hashToCheck, password);
 
     if (!user || !valid) {
-      return reply.code(401).send({ error: "Špatné jméno nebo heslo." });
+      return reply.code(401).send({ error: "Wrong username or password." });
     }
 
     const refreshToken = GenerateRefreshToken();
@@ -146,7 +146,7 @@ export async function AuthRoutes(app: FastifyInstance): Promise<void> {
   app.post("/auth/refresh", async (request, reply) => {
     const parsed = RefreshBody.safeParse(request.body);
     if (!parsed.success) {
-      return reply.code(400).send({ error: "Chybí refresh token." });
+      return reply.code(400).send({ error: "Missing refresh token." });
     }
 
     const tokenHash = HashRefreshToken(parsed.data.refreshToken);
@@ -156,7 +156,7 @@ export async function AuthRoutes(app: FastifyInstance): Promise<void> {
     });
 
     if (!stored || stored.revokedAt || stored.expiresAt < new Date()) {
-      return reply.code(401).send({ error: "Refresh token je neplatný." });
+      return reply.code(401).send({ error: "That refresh token is not valid." });
     }
 
     const nextToken = GenerateRefreshToken();
@@ -212,7 +212,7 @@ export async function AuthRoutes(app: FastifyInstance): Promise<void> {
         createdAt: true,
       },
     });
-    if (!user) return reply.code(404).send({ error: "Uživatel neexistuje." });
+    if (!user) return reply.code(404).send({ error: "No such user." });
 
     return reply.send({
       ...user,

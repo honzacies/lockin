@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { LogOut, ShieldCheck, User } from "lucide-react";
+import { LogOut, Settings, ShieldCheck, User } from "lucide-react";
 import { ContextMenuItem, ContextMenuLabel } from "@lockin/shared/Components/Shared/ContextMenu";
 import { Popover } from "@lockin/shared/Components/Shared/Popover";
 import { ApiFetch } from "@/Platform/ApiClient";
@@ -68,27 +68,35 @@ export function AccountMenu() {
     >
       {(close) => (
         <div className="flex flex-col gap-px">
-          <ContextMenuLabel first>Účet</ContextMenuLabel>
+          <ContextMenuLabel first>Account</ContextMenuLabel>
           <ContextMenuItem icon={<User size={14} strokeWidth={1.75} className="text-[#5f5e59]" />} onClick={close}>
             {user.username}
           </ContextMenuItem>
 
+          <ContextMenuLabel>Manage</ContextMenuLabel>
+          <ContextMenuItem
+            icon={<Settings size={14} strokeWidth={1.75} className="text-[#5f5e59]" />}
+            onClick={() => {
+              close();
+              window.location.href = "/Settings";
+            }}
+          >
+            Settings
+          </ContextMenuItem>
+          {/* Administraci vidí jen admin; Nastavení má každý. */}
           {user.role === "ADMIN" ? (
-            <>
-              <ContextMenuLabel>Správa</ContextMenuLabel>
-              <ContextMenuItem
-                icon={<ShieldCheck size={14} strokeWidth={1.75} className="text-[#5f5e59]" />}
-                onClick={() => {
-                  close();
-                  window.location.href = "/Admin";
-                }}
-              >
-                Administrace
-              </ContextMenuItem>
-            </>
+            <ContextMenuItem
+              icon={<ShieldCheck size={14} strokeWidth={1.75} className="text-[#5f5e59]" />}
+              onClick={() => {
+                close();
+                window.location.href = "/Admin";
+              }}
+            >
+              Admin
+            </ContextMenuItem>
           ) : null}
 
-          <ContextMenuLabel>Relace</ContextMenuLabel>
+          <ContextMenuLabel>Session</ContextMenuLabel>
           <ContextMenuItem
             danger
             icon={<LogOut size={14} strokeWidth={1.75} />}
@@ -97,7 +105,7 @@ export function AccountMenu() {
               void HandleLogout();
             }}
           >
-            Odhlásit se
+            Sign out
           </ContextMenuItem>
         </div>
       )}

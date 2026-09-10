@@ -55,14 +55,14 @@ export async function SyncRoutes(app: FastifyInstance): Promise<void> {
   app.put("/projects/:id", async (request, reply) => {
     const parsed = EnvelopeBody.safeParse(request.body);
     if (!parsed.success) {
-      return reply.code(400).send({ error: parsed.error.issues[0]?.message ?? "Neplatný projekt." });
+      return reply.code(400).send({ error: parsed.error.issues[0]?.message ?? "Invalid project." });
     }
     const body = parsed.data;
 
     // Cesta v URL musí sedět s tělem — jinak by se dal přepsat jiný záznam
     // podstrčením odlišného id uvnitř.
     if ((request.params as { id: string }).id !== body.id) {
-      return reply.code(400).send({ error: "ID v adrese a v těle se neshodují." });
+      return reply.code(400).send({ error: "The id in the URL and in the body do not match." });
     }
 
     const data = {
@@ -94,12 +94,12 @@ export async function SyncRoutes(app: FastifyInstance): Promise<void> {
     if (!parsed.success) {
       return reply
         .code(400)
-        .send({ error: parsed.error.issues[0]?.message ?? "Neplatný dokument." });
+        .send({ error: parsed.error.issues[0]?.message ?? "Invalid document." });
     }
     const body = parsed.data;
 
     if ((request.params as { id: string }).id !== body.id) {
-      return reply.code(400).send({ error: "ID v adrese a v těle se neshodují." });
+      return reply.code(400).send({ error: "The id in the URL and in the body do not match." });
     }
 
     const data = {
@@ -146,7 +146,7 @@ export async function SyncRoutes(app: FastifyInstance): Promise<void> {
       .object({ value: Ciphertext, nonce: Nonce })
       .safeParse(request.body);
     if (!parsed.success) {
-      return reply.code(400).send({ error: "Chybí hodnota, nebo je moc velká." });
+      return reply.code(400).send({ error: "Missing value, or it is too large." });
     }
     const userId = request.user.sub;
 

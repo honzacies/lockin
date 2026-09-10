@@ -11,7 +11,7 @@ const CreateInvites = z.object({
 });
 
 const UpdateQuota = z.object({
-  storageQuota: z.string().regex(/^\d+$/, "Kvóta musí být celé číslo v bajtech"),
+  storageQuota: z.string().regex(/^\d+$/, "Quota must be a whole number of bytes"),
 });
 
 export async function AdminRoutes(app: FastifyInstance): Promise<void> {
@@ -48,7 +48,7 @@ export async function AdminRoutes(app: FastifyInstance): Promise<void> {
   app.post("/admin/invites", async (request, reply) => {
     const parsed = CreateInvites.safeParse(request.body ?? {});
     if (!parsed.success) {
-      return reply.code(400).send({ error: parsed.error.issues[0]?.message ?? "Neplatný vstup." });
+      return reply.code(400).send({ error: parsed.error.issues[0]?.message ?? "Invalid input." });
     }
     const { count, note, expiresInDays } = parsed.data;
     const expiresAt = expiresInDays
@@ -70,9 +70,9 @@ export async function AdminRoutes(app: FastifyInstance): Promise<void> {
   app.post("/admin/invites/:id/revoke", async (request, reply) => {
     const { id } = request.params as { id: string };
     const invite = await app.prisma.inviteCode.findUnique({ where: { id } });
-    if (!invite) return reply.code(404).send({ error: "Kód neexistuje." });
+    if (!invite) return reply.code(404).send({ error: "No such code." });
     if (invite.usedAt) {
-      return reply.code(409).send({ error: "Použitý kód už odvolat nejde." });
+      return reply.code(409).send({ error: "A code that has been used cannot be revoked." });
     }
 
     await app.prisma.inviteCode.update({
@@ -114,11 +114,11 @@ export async function AdminRoutes(app: FastifyInstance): Promise<void> {
     const { id } = request.params as { id: string };
     const parsed = UpdateQuota.safeParse(request.body);
     if (!parsed.success) {
-      return reply.code(400).send({ error: parsed.error.issues[0]?.message ?? "Neplatná kvóta." });
+      return reply.code(400).send({ error: parsed.error.issues[0]?.message ?? "Invalid quota." });
     }
 
     const user = await app.prisma.user.findUnique({ where: { id } });
-    if (!user) return reply.code(404).send({ error: "Uživatel neexistuje." });
+    if (!user) return reply.code(404).send({ error: "No such user." });
 
     await app.prisma.user.update({
       where: { id },

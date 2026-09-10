@@ -1,21 +1,18 @@
 "use client";
 
-import { useRouter } from "next/navigation";
 import { AuthForm, AuthLink } from "@/Components/AuthForm";
 import { ApiPostPublic } from "@/Platform/ApiClient";
 import { SetSession, type SessionUser } from "@/Platform/Session";
 
 export default function LoginPage() {
-  const router = useRouter();
-
   return (
     <AuthForm
-      title="Přihlášení"
-      subtitle="Vítej zpátky v LockIn."
-      submitLabel="Přihlásit se"
+      title="Sign in"
+      subtitle="Welcome back to LockIn."
+      submitLabel="Sign in"
       fields={[
-        { name: "username", label: "Uživatelské jméno", type: "text", autoComplete: "username" },
-        { name: "password", label: "Heslo", type: "password", autoComplete: "current-password" },
+        { name: "username", label: "Username", type: "text", autoComplete: "username" },
+        { name: "password", label: "Password", type: "password", autoComplete: "current-password" },
       ]}
       onSubmit={async (values) => {
         const result = await ApiPostPublic<{
@@ -33,8 +30,8 @@ export default function LoginPage() {
       }}
       footer={
         <>
-          Nemáš účet? <AuthLink href="/Register">Zaregistruj se</AuthLink> — budeš potřebovat
-          invite kód.
+          No account yet? <AuthLink href="/Register">Create one</AuthLink> — you&apos;ll need an
+          invite code.
         </>
       }
     />

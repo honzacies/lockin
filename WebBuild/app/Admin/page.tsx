@@ -38,10 +38,10 @@ const STATE_STYLE: Record<Invite["state"], string> = {
 };
 
 const STATE_LABEL: Record<Invite["state"], string> = {
-  active: "aktivní",
-  used: "použitý",
-  expired: "vypršel",
-  revoked: "odvolaný",
+  active: "active",
+  used: "used",
+  expired: "expired",
+  revoked: "revoked",
 };
 
 export default function AdminPage() {
@@ -62,7 +62,7 @@ export default function AdminPage() {
       setInvites(nextInvites);
       setUsers(nextUsers);
     } catch (caught) {
-      setError(caught instanceof Error ? caught.message : "Načtení selhalo.");
+      setError(caught instanceof Error ? caught.message : "Could not load.");
     }
   }, []);
 
@@ -73,7 +73,7 @@ export default function AdminPage() {
       return;
     }
     if (user.role !== "ADMIN") {
-      setError("Na tuhle stránku nemáš oprávnění.");
+      setError("You do not have access to this page.");
       return;
     }
     void Load();
@@ -94,7 +94,7 @@ export default function AdminPage() {
       setCount("1");
       await Load();
     } catch (caught) {
-      setError(caught instanceof Error ? caught.message : "Vytvoření selhalo.");
+      setError(caught instanceof Error ? caught.message : "Could not create codes.");
     } finally {
       setCreating(false);
     }
@@ -105,7 +105,7 @@ export default function AdminPage() {
       await ApiFetch(`/admin/invites/${id}/revoke`, { method: "POST" });
       await Load();
     } catch (caught) {
-      setError(caught instanceof Error ? caught.message : "Odvolání selhalo.");
+      setError(caught instanceof Error ? caught.message : "Could not revoke the code.");
     }
   }
 
@@ -127,23 +127,23 @@ export default function AdminPage() {
     <div className="flex min-h-0 flex-1 flex-col gap-6 overflow-y-auto px-[50px] pt-6 pb-16">
       <div className="flex items-center gap-1.5 text-sm text-[#91918e]">
         <ShieldX size={16} strokeWidth={1.5} />
-        Administrace
+        Admin
       </div>
       <div className="flex items-center gap-2.5">
         <ShieldX size={56} strokeWidth={1.5} className="text-black" />
-        <p className="text-[40px] font-medium tracking-[-0.8px] text-black">Administrace</p>
+        <p className="text-[40px] font-medium tracking-[-0.8px] text-black">Admin</p>
       </div>
 
       <AdminMetrics />
 
       <section className="flex flex-col gap-3">
         <span className="text-[10px] font-semibold uppercase tracking-wider text-[#a5a49f]">
-          Invite kódy
+          Invite codes
         </span>
 
         <div className="flex items-end gap-1.5">
           <label className="flex flex-col gap-1">
-            <span className="text-xs text-[#91918e]">Počet</span>
+            <span className="text-xs text-[#91918e]">Count</span>
             <Input
               type="number"
               min={1}
@@ -154,11 +154,11 @@ export default function AdminPage() {
             />
           </label>
           <label className="flex flex-1 flex-col gap-1">
-            <span className="text-xs text-[#91918e]">Poznámka (nepovinná)</span>
+            <span className="text-xs text-[#91918e]">Note (optional)</span>
             <Input
               value={note}
               onChange={(e) => setNote(e.target.value)}
-              placeholder="např. pro Pavla"
+              placeholder="e.g. for Pavel"
               className="w-full rounded-lg border border-[#f0efed] px-2 py-1.5 text-sm outline-none focus:border-[#c9c8c4]"
             />
           </label>
@@ -173,7 +173,7 @@ export default function AdminPage() {
             ) : (
               <Plus size={14} strokeWidth={1.75} />
             )}
-            Vygenerovat
+            Generate
           </Button>
         </div>
 
@@ -183,7 +183,7 @@ export default function AdminPage() {
           <table className="w-full border-collapse text-[13px]">
             <thead>
               <tr>
-                {["Kód", "Stav", "Poznámka", "Použil", "Vytvořen", ""].map((header) => (
+                {["Code", "State", "Note", "Used by", "Created", ""].map((header) => (
                   <th
                     key={header}
                     className="border-b border-[#f0efed] bg-[#f9f8f7] px-3 py-2 text-left font-medium text-[#5f5e59]"
@@ -197,13 +197,13 @@ export default function AdminPage() {
               {invites === null ? (
                 <tr>
                   <td colSpan={6} className="px-3 py-6 text-center text-[#91918e]">
-                    Načítám…
+                    Loading…
                   </td>
                 </tr>
               ) : invites.length === 0 ? (
                 <tr>
                   <td colSpan={6} className="px-3 py-6 text-center text-[#91918e]">
-                    Zatím žádné kódy.
+                    No codes yet.
                   </td>
                 </tr>
               ) : (
@@ -216,13 +216,13 @@ export default function AdminPage() {
                         <button
                           type="button"
                           onClick={() => HandleCopy(invite.code)}
-                          aria-label="Zkopírovat kód"
+                          aria-label="Copy code"
                           className="rounded p-0.5 text-[#c9c8c4] hover:bg-black/[0.06] hover:text-[#2c2c2b]"
                         >
                           <Copy size={12} strokeWidth={1.75} />
                         </button>
                         {copied === invite.code ? (
-                          <span className="text-[10px] text-[#30a46c]">zkopírováno</span>
+                          <span className="text-[10px] text-[#30a46c]">copied</span>
                         ) : null}
                       </div>
                     </td>
@@ -240,7 +240,7 @@ export default function AdminPage() {
                       {invite.usedBy?.username ?? "—"}
                     </td>
                     <td className="border-b border-[#f0efed] px-3 py-2 text-[#91918e]">
-                      {new Date(invite.createdAt).toLocaleDateString("cs-CZ")}
+                      {new Date(invite.createdAt).toLocaleDateString("en-GB")}
                     </td>
                     <td className="border-b border-[#f0efed] px-3 py-2 text-right">
                       {invite.state === "active" ? (
@@ -249,7 +249,7 @@ export default function AdminPage() {
                           onClick={() => HandleRevoke(invite.id)}
                           className="text-xs text-[#91918e] underline underline-offset-2 hover:text-[#e5484d]"
                         >
-                          Odvolat
+                          Revoke
                         </button>
                       ) : null}
                     </td>
@@ -263,13 +263,13 @@ export default function AdminPage() {
 
       <section className="flex flex-col gap-3">
         <span className="text-[10px] font-semibold uppercase tracking-wider text-[#a5a49f]">
-          Uživatelé
+          Users
         </span>
         <div className="overflow-x-auto rounded-xl border border-[#f0efed]">
           <table className="w-full border-collapse text-[13px]">
             <thead>
               <tr>
-                {["Jméno", "Role", "Úložiště", "Dokumenty", "Projekty", "Naposledy"].map((h) => (
+                {["Name", "Role", "Storage", "Documents", "Projects", "Last seen"].map((h) => (
                   <th
                     key={h}
                     className="border-b border-[#f0efed] bg-[#f9f8f7] px-3 py-2 text-left font-medium text-[#5f5e59]"
@@ -283,7 +283,7 @@ export default function AdminPage() {
               {users === null ? (
                 <tr>
                   <td colSpan={6} className="px-3 py-6 text-center text-[#91918e]">
-                    Načítám…
+                    Loading…
                   </td>
                 </tr>
               ) : (
@@ -297,7 +297,7 @@ export default function AdminPage() {
                         {user.username}
                       </td>
                       <td className="border-b border-[#f0efed] px-3 py-2 text-[#5f5e59]">
-                        {user.role === "ADMIN" ? "admin" : "uživatel"}
+                        {user.role === "ADMIN" ? "admin" : "user"}
                       </td>
                       <td className="border-b border-[#f0efed] px-3 py-2">
                         <div className="flex items-center gap-2">
@@ -323,8 +323,8 @@ export default function AdminPage() {
                       </td>
                       <td className="border-b border-[#f0efed] px-3 py-2 text-[#91918e]">
                         {user.lastSeenAt
-                          ? new Date(user.lastSeenAt).toLocaleDateString("cs-CZ")
-                          : "nikdy"}
+                          ? new Date(user.lastSeenAt).toLocaleDateString("en-GB")
+                          : "never"}
                       </td>
                     </tr>
                   );

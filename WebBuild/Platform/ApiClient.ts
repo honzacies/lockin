@@ -100,7 +100,7 @@ export async function ApiFetch<T>(path: string, options: RequestOptions = {}): P
 
   if (response.status === 401) {
     ClearSession();
-    throw new ApiError("Přihlášení vypršelo.", 401);
+    throw new ApiError("Your session has expired.", 401);
   }
 
   if (!response.ok) {
@@ -108,7 +108,7 @@ export async function ApiFetch<T>(path: string, options: RequestOptions = {}): P
       .json()
       .then((data: { error?: string }) => data.error)
       .catch(() => null);
-    throw new ApiError(message ?? `Požadavek selhal (${response.status}).`, response.status);
+    throw new ApiError(message ?? `Request failed (${response.status}).`, response.status);
   }
 
   if (response.status === 204) return undefined as T;
@@ -128,7 +128,7 @@ export async function ApiPostPublic<T>(path: string, body: unknown): Promise<T> 
       .json()
       .then((data: { error?: string }) => data.error)
       .catch(() => null);
-    throw new ApiError(message ?? `Požadavek selhal (${response.status}).`, response.status);
+    throw new ApiError(message ?? `Request failed (${response.status}).`, response.status);
   }
 
   if (response.status === 204) return undefined as T;

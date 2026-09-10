@@ -25,7 +25,7 @@ import { OpenFile, OpenJson, SealFile, SealJson, type Sealed } from "./Crypto";
 function RequireKey(): CryptoKey {
   const key = GetMasterKey();
   if (!key) {
-    throw new Error("Trezor je zamčený — nejdřív je potřeba zadat passphrase.");
+    throw new Error("The vault is locked — enter your passphrase first.");
   }
   return key;
 }
@@ -64,7 +64,7 @@ async function OpenAll<T>(envelopes: Envelope[], label: string): Promise<T[]> {
     try {
       out.push(await OpenJson<T>(key, envelope));
     } catch {
-      console.warn(`${label} ${envelope.id}: nejde dešifrovat, přeskakuji`);
+      console.warn(`${label} ${envelope.id}: cannot decrypt, skipping`);
     }
   }
   return out;
@@ -74,8 +74,8 @@ export const ApiDataStorage: DataStorageAdapter = {
   async LoadAll() {
     const payload = await ApiFetch<{ projects: Envelope[]; documents: Envelope[] }>("/sync");
     const [projects, documents] = await Promise.all([
-      OpenAll<Project>(payload.projects, "Projekt"),
-      OpenAll<DocumentRecord>(payload.documents, "Dokument"),
+      OpenAll<Project>(payload.projects, "Project"),
+      OpenAll<DocumentRecord>(payload.documents, "Document"),
     ]);
     return { projects, documents };
   },
@@ -221,7 +221,7 @@ export const ApiKeyValue: KeyValueAdapter = {
           nonce: result.nonce,
         });
       } catch {
-        console.warn(`${store}/${key}: nejde dešifrovat, beru jako prázdné`);
+        console.warn(`${store}/${key}: cannot decrypt, treating as empty`);
         return null;
       }
     } catch (error) {

@@ -22,24 +22,24 @@ export async function MediaRoutes(app: FastifyInstance): Promise<void> {
       where: { id: userId },
       select: { storageQuota: true, storageUsed: true },
     });
-    if (!user) return reply.code(404).send({ error: "Uživatel neexistuje." });
+    if (!user) return reply.code(404).send({ error: "No such user." });
     if (user.storageUsed >= user.storageQuota) {
-      return reply.code(413).send({ error: "Vyčerpal jsi úložnou kvótu." });
+      return reply.code(413).send({ error: "You have used up your storage quota." });
     }
 
     const file = await request.file({ limits: { fileSize: Env.MAX_UPLOAD_BYTES } });
-    if (!file) return reply.code(400).send({ error: "Chybí soubor." });
+    if (!file) return reply.code(400).send({ error: "No file in the request." });
 
     const buffer = await file.toBuffer().catch(() => null);
     if (!buffer) {
       return reply
         .code(413)
-        .send({ error: `Soubor je moc velký (max ${Math.floor(Env.MAX_UPLOAD_BYTES / 1024 / 1024)} MB).` });
+        .send({ error: `That file is too large (${Math.floor(Env.MAX_UPLOAD_BYTES / 1024 / 1024)} MB max).` });
     }
 
     const bytes = buffer.byteLength;
     if (BigInt(bytes) + user.storageUsed > user.storageQuota) {
-      return reply.code(413).send({ error: "Soubor by přesáhl tvoji úložnou kvótu." });
+      return reply.code(413).send({ error: "That file would exceed your storage quota." });
     }
 
     // Žádná přípona — obsah je šifrovaný a server netuší, co v něm je.
@@ -73,13 +73,13 @@ export async function MediaRoutes(app: FastifyInstance): Promise<void> {
     const row = await app.prisma.mediaFile.findUnique({
       where: { userId_path: { userId: request.user.sub, path: `Media/${clientPath}` } },
     });
-    if (!row) return reply.code(404).send({ error: "Soubor neexistuje." });
+    if (!row) return reply.code(404).send({ error: "No such file." });
 
     const absolute = path.join(Env.MEDIA_DIR, row.storageKey);
     try {
       await stat(absolute);
     } catch {
-      return reply.code(404).send({ error: "Soubor na disku chybí." });
+      return reply.code(404).send({ error: "The file is missing on disk." });
     }
 
     // Vždycky octet-stream: skutečný typ je uvnitř šifrované hlavičky, kterou
@@ -117,7 +117,7 @@ export async function MediaRoutes(app: FastifyInstance): Promise<void> {
   app.post("/media/sweep", async (request, reply) => {
     const body = request.body as { referenced?: unknown };
     if (!Array.isArray(body?.referenced)) {
-      return reply.code(400).send({ error: "Chybí seznam `referenced`." });
+      return reply.code(400).send({ error: "Missing `referenced` list." });
     }
     const referenced = new Set(body.referenced.filter((p): p is string => typeof p === "string"));
     const userId = request.user.sub;

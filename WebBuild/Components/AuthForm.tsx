@@ -45,7 +45,7 @@ export function AuthForm({
     try {
       await onSubmit(values);
     } catch (caught) {
-      setError(caught instanceof Error ? caught.message : "Něco se pokazilo.");
+      setError(caught instanceof Error ? caught.message : "Something went wrong.");
     } finally {
       setBusy(false);
     }

@@ -98,13 +98,13 @@ export async function SetupPassphrase(passphrase: string): Promise<void> {
  */
 export async function Unlock(passphrase: string): Promise<void> {
   const record = await FetchWrappedKey();
-  if (!record) throw new Error("Passphrase ještě není nastavená.");
+  if (!record) throw new Error("No passphrase has been set up yet.");
 
   let key: CryptoKey;
   try {
     key = await UnwrapKey(passphrase, record);
   } catch {
-    throw new Error("Špatná passphrase.");
+    throw new Error("Wrong passphrase.");
   }
 
   cached = key;
@@ -123,13 +123,13 @@ export async function ChangePassphrase(
   accountPassword: string,
 ): Promise<void> {
   const record = await FetchWrappedKey();
-  if (!record) throw new Error("Passphrase ještě není nastavená.");
+  if (!record) throw new Error("No passphrase has been set up yet.");
 
   let next: WrappedKeyRecord;
   try {
     next = await RewrapKey(oldPassphrase, newPassphrase, record);
   } catch {
-    throw new Error("Stará passphrase nesedí.");
+    throw new Error("That is not your current passphrase.");
   }
 
   await ApiFetch("/keys/me", {

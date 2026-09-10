@@ -60,15 +60,15 @@ export function PassphraseGate({ children }: { children: React.ReactNode }) {
 
     if (phase === "setup") {
       if (passphrase.length < 10) {
-        setError("Passphrase musí mít aspoň 10 znaků.");
+        setError("Your passphrase must be at least 10 characters.");
         return;
       }
       if (passphrase !== confirmation) {
-        setError("Passphrase se neshodují.");
+        setError("The passphrases do not match.");
         return;
       }
       if (!understood) {
-        setError("Potvrď prosím, že rozumíš, že passphrase nejde obnovit.");
+        setError("Please confirm you understand the passphrase cannot be recovered.");
         return;
       }
     }
@@ -79,7 +79,7 @@ export function PassphraseGate({ children }: { children: React.ReactNode }) {
       else await Unlock(passphrase);
       setPhase("ready");
     } catch (caught) {
-      setError(caught instanceof Error ? caught.message : "Nepovedlo se.");
+      setError(caught instanceof Error ? caught.message : "That did not work.");
     } finally {
       setBusy(false);
     }
@@ -93,15 +93,15 @@ export function PassphraseGate({ children }: { children: React.ReactNode }) {
         <div className="flex flex-col gap-1.5">
           <div className="flex items-center gap-1.5 text-sm text-[#91918e]">
             <KeyRound size={16} strokeWidth={1.5} />
-            {isSetup ? "Nastavení šifrování" : "Odemknout data"}
+            {isSetup ? "Set up encryption" : "Unlock your data"}
           </div>
           <p className="text-[32px] font-medium tracking-[-0.6px] text-black">
-            {isSetup ? "Zvol si passphrase" : "Zadej passphrase"}
+            {isSetup ? "Choose a passphrase" : "Enter your passphrase"}
           </p>
           <p className="text-sm leading-relaxed text-[#5f5e59]">
             {isSetup
-              ? "Tvoje dokumenty se šifrují přímo v prohlížeči. Na server jde jen zašifrovaná podoba, kterou nepřečteme ani my."
-              : "Data jsou zašifrovaná. Bez passphrase je nedokáže dešifrovat nikdo — server ani my."}
+              ? "Your documents are encrypted right here in your browser. Only the encrypted form ever reaches the server, and we cannot read it either."
+              : "Your data is encrypted. Without the passphrase nobody can decrypt it — not the server, not us."}
           </p>
         </div>
 
@@ -109,9 +109,9 @@ export function PassphraseGate({ children }: { children: React.ReactNode }) {
           <div className="flex gap-2.5 rounded-xl border border-[#e5a000]/30 bg-[#e5a000]/[0.06] px-3 py-2.5">
             <ShieldAlert size={16} strokeWidth={1.75} className="mt-0.5 shrink-0 text-[#e5a000]" />
             <p className="text-[13px] leading-relaxed text-[#5f5e59]">
-              <strong className="text-[#2c2c2b]">Passphrase nejde obnovit.</strong> Neukládáme ji
-              a nemáme z ní nic, čím bychom ji odvodili. Když ji zapomeneš, přijdeš o všechny
-              dokumenty — my s tím nedokážeme pomoct.
+              <strong className="text-[#2c2c2b]">There is no way to recover it.</strong> We do not
+              store your passphrase and we hold nothing that could derive it. If you forget it, your
+              documents are gone for good — we cannot help with that.
             </p>
           </div>
         ) : null}
@@ -132,7 +132,8 @@ export function PassphraseGate({ children }: { children: React.ReactNode }) {
             />
             {isSetup ? (
               <span className="text-xs text-[#91918e]">
-                Aspoň 10 znaků. Jiná než heslo k účtu — to zná server, tohle ne.
+                At least 10 characters. Different from your account password — the server knows
+                that one, it never sees this one.
               </span>
             ) : null}
           </label>
@@ -141,7 +142,7 @@ export function PassphraseGate({ children }: { children: React.ReactNode }) {
             <>
               <label className="flex flex-col gap-1.5">
                 <span className="text-[10px] font-semibold uppercase tracking-wider text-[#a5a49f]">
-                  Passphrase znovu
+                  Confirm passphrase
                 </span>
                 <Input
                   type="password"
@@ -160,7 +161,8 @@ export function PassphraseGate({ children }: { children: React.ReactNode }) {
                   onChange={(e) => setUnderstood(e.target.checked)}
                   className="mt-0.5 size-3.5 shrink-0 accent-[#2c2c2b]"
                 />
-                Rozumím, že passphrase nejde obnovit a že při jejím zapomenutí o data přijdu.
+                I understand the passphrase cannot be recovered, and that forgetting it means
+                losing my data.
               </label>
             </>
           ) : null}
@@ -180,16 +182,16 @@ export function PassphraseGate({ children }: { children: React.ReactNode }) {
             {busy ? <Loader2 size={15} strokeWidth={1.75} className="animate-spin" /> : null}
             {busy
               ? isSetup
-                ? "Vytvářím klíč…"
-                : "Odemykám…"
+                ? "Creating your key…"
+                : "Unlocking…"
               : isSetup
-                ? "Zapnout šifrování"
-                : "Odemknout"}
+                ? "Turn on encryption"
+                : "Unlock"}
           </Button>
 
           {busy ? (
             <p className="text-center text-xs text-[#91918e]">
-              Odvození klíče je schválně pomalé — ztěžuje to útok hrubou silou.
+              Deriving the key is slow on purpose — it makes brute-forcing expensive.
             </p>
           ) : null}
         </form>

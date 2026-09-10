@@ -42,7 +42,7 @@ async function AuthPlugin(app: FastifyInstance): Promise<void> {
     try {
       await request.jwtVerify();
     } catch {
-      await reply.code(401).send({ error: "Přihlášení vypršelo nebo chybí." });
+      await reply.code(401).send({ error: "Missing or expired sign-in." });
       return reply;
     }
   });
@@ -51,12 +51,12 @@ async function AuthPlugin(app: FastifyInstance): Promise<void> {
     try {
       await request.jwtVerify();
     } catch {
-      await reply.code(401).send({ error: "Přihlášení vypršelo nebo chybí." });
+      await reply.code(401).send({ error: "Missing or expired sign-in." });
       return reply;
     }
     if (request.user.role !== "ADMIN") {
       // Schválně 403 a ne 404 — uživatel je ověřený, jen na tohle nemá právo.
-      await reply.code(403).send({ error: "Nemáte oprávnění." });
+      await reply.code(403).send({ error: "You do not have permission to do that." });
       return reply;
     }
   });

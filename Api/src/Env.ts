@@ -10,10 +10,10 @@ const Schema = z.object({
   PORT: z.coerce.number().int().positive().default(4000),
   HOST: z.string().default("0.0.0.0"),
 
-  DATABASE_URL: z.string().min(1, "DATABASE_URL musí být nastavená"),
+  DATABASE_URL: z.string().min(1, "DATABASE_URL must be set"),
 
   /// Minimálně 32 znaků — kratší klíč je u HS256 zbytečně slabý.
-  JWT_SECRET: z.string().min(32, "JWT_SECRET musí mít aspoň 32 znaků"),
+  JWT_SECRET: z.string().min(32, "JWT_SECRET must be at least 32 characters"),
   ACCESS_TOKEN_TTL: z.string().default("15m"),
   REFRESH_TOKEN_TTL_DAYS: z.coerce.number().int().positive().default(30),
 
@@ -39,7 +39,7 @@ if (!parsed.success) {
   const issues = parsed.error.issues
     .map((issue) => `  ${issue.path.join(".")}: ${issue.message}`)
     .join("\n");
-  console.error(`Chybná konfigurace prostředí:\n${issues}`);
+  console.error(`Invalid environment configuration:\n${issues}`);
   process.exit(1);
 }
 
