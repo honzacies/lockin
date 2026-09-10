@@ -4,11 +4,14 @@
     {
       "name": "web",
       "runtimeExecutable": "bun",
-      "runtimeArgs": [
-        "run",
-        "web:dev"
-      ],
+      "runtimeArgs": ["run", "web:dev"],
       "port": 3001
+    },
+    {
+      "name": "tauri-export",
+      "runtimeExecutable": "bun",
+      "runtimeArgs": ["x", "serve", "TauriBuild/out", "-p", "3002"],
+      "port": 3002
     }
   ]
 }

@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, type ReactNode } from "react";
+import { Suspense, useEffect, type ReactNode } from "react";
 import { usePathname } from "next/navigation";
 import { Sidebar } from "./Sidebar";
 import { Topbar } from "./Topbar";
@@ -69,11 +69,30 @@ export function AppShell({ children }: AppShellProps) {
 
   return (
     <div className="flex h-screen w-screen overflow-hidden bg-white">
-      {!sidebarCollapsed && <Sidebar />}
+      {/* Sidebar volá `useSearchParams()` (zvýrazňuje řádek podle URL), což
+        * u prerenderu vyžaduje hranici Suspense — bez ní neprojde statický
+        * export ani prerender `/_not-found` na serveru. Hranice je jen kolem
+        * sidebaru, ne kolem celého shellu, aby se zbytek layoutu prerenderovat
+        * mohl. Fallback je skeleton stejné šířky, takže se při hydrataci
+        * neposune obsah. */}
+      {!sidebarCollapsed && (
+        <Suspense fallback={<SidebarPlaceholder />}>
+          <Sidebar />
+        </Suspense>
+      )}
       <div className="flex min-w-0 flex-1 flex-col">
         <Topbar onToggleSidebar={toggleSidebar} />
         <TodoSettingsPanelSlot>{children}</TodoSettingsPanelSlot>
       </div>
     </div>
+  );
+}
+
+/** Prázdný sidebar ve stejných rozměrech — drží místo, než se Sidebar
+ * vykreslí, aby obsah vedle nepodskočil. Vlastní řádky nekreslí; Sidebar má
+ * své skeletony a naskočí hned po hydrataci. */
+function SidebarPlaceholder() {
+  return (
+    <div className="flex h-full w-[300px] shrink-0 flex-col border-r border-[#f0efed] bg-[#faf9f8] p-2.5" />
   );
 }

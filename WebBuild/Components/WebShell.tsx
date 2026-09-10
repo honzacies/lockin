@@ -6,7 +6,7 @@
 // než se vyhodnotí moduly storů níž.
 import "@/Platform/Register";
 
-import { Suspense, useEffect, useState, type ReactNode } from "react";
+import { useEffect, useState, type ReactNode } from "react";
 import { usePathname } from "next/navigation";
 import { AppShell } from "@lockin/shared/Components/AppShell/AppShell";
 import { GetSessionUser, OnSessionChange, type SessionUser } from "@/Platform/Session";
@@ -42,14 +42,11 @@ export function WebShell({ children }: { children: ReactNode }) {
     return <div className="flex min-h-screen flex-col bg-white">{children}</div>;
   }
 
-  // Suspense kolem celého shellu je tu kvůli `Sidebar`, který volá
-  // `useSearchParams()`. Bez hranice Next neprerenderuje `/_not-found` a build
-  // spadne. Sidebar sám se nemění — hranice kdekoliv nad voláním stačí.
+  // Suspense kolem Sidebaru si teď řeší AppShell sám (Shared), takže tady
+  // žádná hranice navíc být nemusí.
   return (
     <>
-      <Suspense fallback={null}>
-        <AppShell>{children}</AppShell>
-      </Suspense>
+      <AppShell>{children}</AppShell>
       {ready && user ? <MigrationPrompt user={user} /> : null}
     </>
   );
