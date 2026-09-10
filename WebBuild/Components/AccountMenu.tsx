@@ -6,6 +6,7 @@ import { ContextMenuItem, ContextMenuLabel } from "@lockin/shared/Components/Sha
 import { Popover } from "@lockin/shared/Components/Shared/Popover";
 import { ApiFetch } from "@/Platform/ApiClient";
 import { ClearSession, GetSessionUser, OnSessionChange, GetRefreshToken, type SessionUser } from "@/Platform/Session";
+import { Lock } from "@/Platform/KeyVault";
 
 /**
  * Pata sidebaru na webu — kdo je přihlášený, odkaz do administrace (jen pro
@@ -32,6 +33,10 @@ export function AccountMenu() {
     if (refreshToken) {
       await ApiFetch("/auth/logout", { method: "POST", body: { refreshToken } }).catch(() => {});
     }
+    // Zamknout trezor dřív než zahodit session — jinak by hlavní klíč zůstal
+    // ležet v IndexedDB a zdědil by ho další, kdo se na tomhle prohlížeči
+    // přihlásí.
+    await Lock();
     ClearSession();
     window.location.href = "/Login";
   }

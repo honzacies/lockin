@@ -19,6 +19,22 @@ CREATE TABLE "User" (
 );
 
 -- CreateTable
+CREATE TABLE "UserKey" (
+    "userId" TEXT NOT NULL,
+    "salt" TEXT NOT NULL,
+    "wrappedKey" TEXT NOT NULL,
+    "nonce" TEXT NOT NULL,
+    "algorithm" TEXT NOT NULL DEFAULT 'argon2id',
+    "memoryKiB" INTEGER NOT NULL DEFAULT 65536,
+    "iterations" INTEGER NOT NULL DEFAULT 3,
+    "parallelism" INTEGER NOT NULL DEFAULT 1,
+    "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    "updatedAt" TIMESTAMP(3) NOT NULL,
+
+    CONSTRAINT "UserKey_pkey" PRIMARY KEY ("userId")
+);
+
+-- CreateTable
 CREATE TABLE "InviteCode" (
     "id" TEXT NOT NULL,
     "code" TEXT NOT NULL,
@@ -37,21 +53,10 @@ CREATE TABLE "Project" (
     "id" TEXT NOT NULL,
     "userId" TEXT NOT NULL,
     "clientId" TEXT NOT NULL,
-    "name" TEXT NOT NULL,
-    "icon" TEXT,
-    "tag" TEXT NOT NULL,
-    "priority" TEXT NOT NULL,
-    "status" TEXT NOT NULL,
-    "progress" INTEGER NOT NULL DEFAULT 0,
-    "deadline" TEXT,
-    "deadlineTime" TEXT,
     "createdAt" TIMESTAMP(3) NOT NULL,
     "lastEditedAt" TIMESTAMP(3) NOT NULL,
-    "rootDocumentId" TEXT NOT NULL,
-    "documentIds" TEXT[],
-    "isFavorite" BOOLEAN NOT NULL DEFAULT false,
-    "folderId" TEXT,
-    "tagIds" TEXT[],
+    "ciphertext" TEXT NOT NULL,
+    "nonce" TEXT NOT NULL,
 
     CONSTRAINT "Project_pkey" PRIMARY KEY ("id")
 );
@@ -61,23 +66,10 @@ CREATE TABLE "Document" (
     "id" TEXT NOT NULL,
     "userId" TEXT NOT NULL,
     "clientId" TEXT NOT NULL,
-    "projectId" TEXT,
-    "name" TEXT NOT NULL,
-    "description" TEXT NOT NULL DEFAULT '',
-    "icon" TEXT,
     "createdAt" TIMESTAMP(3) NOT NULL,
     "updatedAt" TIMESTAMP(3) NOT NULL,
-    "lastMode" TEXT NOT NULL DEFAULT 'text',
-    "folderId" TEXT,
-    "tagIds" TEXT[],
-    "isFavorite" BOOLEAN NOT NULL DEFAULT false,
-    "isLocked" BOOLEAN NOT NULL DEFAULT false,
-    "smallText" BOOLEAN NOT NULL DEFAULT false,
-    "showTableOfContents" BOOLEAN NOT NULL DEFAULT false,
-    "text" JSONB NOT NULL,
-    "sketch" JSONB NOT NULL,
-    "style" JSONB,
-    "theme" JSONB,
+    "ciphertext" TEXT NOT NULL,
+    "nonce" TEXT NOT NULL,
 
     CONSTRAINT "Document_pkey" PRIMARY KEY ("id")
 );
@@ -88,6 +80,7 @@ CREATE TABLE "Collection" (
     "name" TEXT NOT NULL,
     "key" TEXT NOT NULL,
     "value" TEXT NOT NULL,
+    "nonce" TEXT NOT NULL,
     "updatedAt" TIMESTAMP(3) NOT NULL,
 
     CONSTRAINT "Collection_pkey" PRIMARY KEY ("userId","name","key")
@@ -99,7 +92,6 @@ CREATE TABLE "MediaFile" (
     "userId" TEXT NOT NULL,
     "path" TEXT NOT NULL,
     "storageKey" TEXT NOT NULL,
-    "mime" TEXT NOT NULL,
     "bytes" INTEGER NOT NULL,
     "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
 
@@ -143,9 +135,6 @@ CREATE UNIQUE INDEX "Project_userId_clientId_key" ON "Project"("userId", "client
 CREATE INDEX "Document_userId_updatedAt_idx" ON "Document"("userId", "updatedAt");
 
 -- CreateIndex
-CREATE INDEX "Document_userId_projectId_idx" ON "Document"("userId", "projectId");
-
--- CreateIndex
 CREATE UNIQUE INDEX "Document_userId_clientId_key" ON "Document"("userId", "clientId");
 
 -- CreateIndex
@@ -165,6 +154,9 @@ CREATE INDEX "RefreshToken_userId_idx" ON "RefreshToken"("userId");
 
 -- CreateIndex
 CREATE INDEX "RefreshToken_expiresAt_idx" ON "RefreshToken"("expiresAt");
+
+-- AddForeignKey
+ALTER TABLE "UserKey" ADD CONSTRAINT "UserKey_userId_fkey" FOREIGN KEY ("userId") REFERENCES "User"("id") ON DELETE CASCADE ON UPDATE CASCADE;
 
 -- AddForeignKey
 ALTER TABLE "InviteCode" ADD CONSTRAINT "InviteCode_usedById_fkey" FOREIGN KEY ("usedById") REFERENCES "User"("id") ON DELETE SET NULL ON UPDATE CASCADE;

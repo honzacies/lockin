@@ -1,9 +1,10 @@
 // LockIn API — datový model
 //
-// Hybridní přístup: skalární sloupce pro to, co se filtruje a řadí (jméno,
-// datum úpravy, oblíbenost, složka), `Json` pro obsah (Tiptap dokument,
-// skica, styly). Tiptap JSON se tak neroztrhá na tabulky, ale Library filtry
-// půjde časem přesunout na server.
+// Dokumenty a projekty jsou pro server **neprůhledné**. Šifrují se v prohlížeči
+// klíčem, který server nikdy nevidí, a sem přijde jen ciphertext plus nejmenší
+// možná čitelná obálka (adresace a časy). Server tedy neumí podle obsahu řadit
+// ani filtrovat — a nemusí, protože klient si přes `/sync` stahuje všechno a
+// filtruje si sám.
 
 generator client {
   provider = "prisma-client-js"
@@ -35,6 +36,7 @@ model User {
   createdAt    DateTime  @default(now())
   lastSeenAt   DateTime?
 
+  key           UserKey?
   inviteCode    InviteCode?
   projects      Project[]
   documents     Document[]
@@ -43,6 +45,35 @@ model User {
   refreshTokens RefreshToken[]
 
   @@index([createdAt])
+}
+
+/// Obalený hlavní klíč uživatele.
+///
+/// Passphrase nešifruje dokumenty — šifruje tenhle jediný záznam. Změna
+/// passphrase tedy přepíše jeden řádek a dokumentů se vůbec nedotkne, ať jich
+/// je pět nebo pět tisíc.
+///
+/// Server drží jen obalenou podobu a parametry odvození. Passphrase, odvozený
+/// klíč ani hlavní klíč se sem nikdy nedostanou.
+model UserKey {
+  userId String @id
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  /// Vše base64. `wrappedKey` je hlavní klíč zašifrovaný klíčem odvozeným
+  /// z passphrase, `nonce` patří k němu.
+  salt       String
+  wrappedKey String
+  nonce      String
+
+  /// Parametry odvození se ukládají s klíčem, aby šlo později zesílit
+  /// nastavení, aniž by se rozbily existující účty.
+  algorithm   String @default("argon2id")
+  memoryKiB   Int    @default(65536)
+  iterations  Int    @default(3)
+  parallelism Int    @default(1)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 }
 
 /// Jednorázový — jeden kód = jeden účet. Po registraci se spálí (`usedAt`,
@@ -64,99 +95,74 @@ model InviteCode {
 }
 
 /// Klient generuje ID sám (`proj-${Date.now()}`), což není globálně unikátní
-/// napříč uživateli — dva lidé mohou ve stejné milisekundě založit projekt se
-/// stejným ID. Proto je primárním klíčem serverový cuid a klientské ID žije
-/// vedle jako `clientId`, unikátní jen v rámci uživatele. API navenek posílá
-/// a přijímá `clientId` jako `id`, takže klient o tomhle rozdílu neví.
+/// napříč uživateli. Proto je primárním klíčem serverový cuid a klientské ID
+/// žije vedle jako `clientId`, unikátní jen v rámci uživatele.
+///
+/// Všechno ostatní — název, ikona, štítek, priorita, stav, postup, termín,
+/// zařazení do složek a seznam dokumentů — je uvnitř `ciphertext`.
 model Project {
   id       String @id @default(cuid())
   userId   String
   user     User   @relation(fields: [userId], references: [id], onDelete: Cascade)
   clientId String
 
-  name           String
-  icon           String?
-  tag            String
-  priority       String
-  status         String
-  progress       Int      @default(0)
-  deadline       String?
-  deadlineTime   String?
-  createdAt      DateTime
-  lastEditedAt   DateTime
-  rootDocumentId String
-  documentIds    String[]
-  isFavorite     Boolean  @default(false)
-  folderId       String?
-  tagIds         String[]
+  createdAt    DateTime
+  lastEditedAt DateTime
+
+  ciphertext String
+  nonce      String
 
   @@unique([userId, clientId])
   @@index([userId, lastEditedAt])
 }
 
+/// Stejný princip jako Project. Uvnitř `ciphertext` je název, popis, ikona,
+/// Tiptap obsah, skica, styly, téma i zařazení do složek a štítků.
 model Document {
   id       String @id @default(cuid())
   userId   String
   user     User   @relation(fields: [userId], references: [id], onDelete: Cascade)
   clientId String
 
-  /// clientId projektu, ne FK — samostatný dokument žádný projekt nemá a
-  /// mazání projektu si kaskádu řeší aplikace, aby šlo dokumenty zachovat.
-  projectId String?
+  createdAt DateTime
+  updatedAt DateTime
 
-  name                String
-  description         String   @default("")
-  icon                String?
-  createdAt           DateTime
-  updatedAt           DateTime
-  lastMode            String   @default("text")
-  folderId            String?
-  tagIds              String[]
-  isFavorite          Boolean  @default(false)
-  isLocked            Boolean  @default(false)
-  smallText           Boolean  @default(false)
-  showTableOfContents Boolean  @default(false)
-
-  /// Tiptap JSONContent
-  text   Json
-  /// { strokes: SketchStroke[] }
-  sketch Json
-  /// DocumentStyleConfig, volitelné
-  style  Json?
-  /// DocumentTheme, volitelné
-  theme  Json?
+  ciphertext String
+  nonce      String
 
   @@unique([userId, clientId])
   @@index([userId, updatedAt])
-  @@index([userId, projectId])
 }
 
-/// Náhrada za zustand `persist` blob. Mapuje se 1:1 na `KeyValueAdapter`:
-/// `name` je logický store („ui-state.json"), `key` je klíč uvnitř něj.
-/// Sem padají složky, tagy, poznámky, rozložení sidebaru a UI stav.
+/// Náhrada za zustand `persist` blob — složky, štítky, poznámky, rozložení
+/// sidebaru, UI stav. `value` je zašifrovaný stejným hlavním klíčem; server
+/// vidí jen název storu a klíč, což jsou konstanty z kódu, ne uživatelská data.
 model Collection {
   userId    String
   user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
   name      String
   key       String
   value     String
+  nonce     String
   updatedAt DateTime @updatedAt
 
   @@id([userId, name, key])
 }
 
+/// Nahraná média. Obsah souboru je zašifrovaný v prohlížeči ještě před
+/// odesláním; uvnitř šifrovaného bloku je i hlavička s původním MIME typem,
+/// takže server nezná ani ten. Zná jen velikost, kvůli kvótě.
 model MediaFile {
   id     String @id @default(cuid())
   userId String
   user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
 
-  /// Cesta, kterou vidí klient a která je uložená v dokumentu —
-  /// „Media/media-1234-abc.png". Zůstává stejná jako v desktopové verzi.
+  /// Cesta, kterou vidí klient a která je uložená v dokumentu.
   path       String
   /// Skutečné jméno souboru na disku serveru. Odděleno od `path`, aby
   /// klientská cesta nikdy neurčovala, kam se na serveru zapisuje.
   storageKey String @unique
-  mime       String
+  /// Velikost šifrovaného souboru. Jediné, co server o médiu ví.
   bytes      Int
   createdAt  DateTime @default(now())
 

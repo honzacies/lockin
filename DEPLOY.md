@@ -153,6 +153,14 @@ MAX_UPLOAD_BYTES=52428800
 přímo z tohohle souboru a bez nich odmítne nastartovat — to je schválně, ať
 nikde nezůstane výchozí heslo.
 
+> **Schéma se změnilo se zavedením šifrování.** Pokud už na serveru běžela
+> starší verze, databáze má staré tabulky a migrace na ni nesedne. Data zatím
+> žádná nejsou, takže nejrychlejší je volume smazat:
+>
+> ```bash
+> cd /srv/lockin/Api && docker compose down -v
+> ```
+
 ## 6. Spuštění API
 
 ```bash

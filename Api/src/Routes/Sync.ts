@@ -1,61 +1,32 @@
 import { z } from "zod";
 import type { FastifyInstance } from "fastify";
-import { ToClientDocument, ToClientProject } from "../Lib/Mappers.js";
 
 /**
- * Zápisové tělo pro projekt i dokument. Obsah (Tiptap JSON, skica, styly) se
- * nevaliduje do hloubky — je to strukturovaný blob, jehož tvar vlastní editor
- * na klientu, a validovat tady celý ProseMirror dokument by znamenalo držet
- * jeho schéma na dvou místech. Server hlídá jen to, co sám používá: kdo to
- * vlastní, jak se to jmenuje, kdy se to změnilo.
+ * Synchronizace dokumentů a projektů.
+ *
+ * Server tady nevidí **nic** z obsahu — dostane ciphertext a uloží ho.
+ * Neexistuje tu proto žádná validace názvů, priorit ani struktury: všechno
+ * tohle je uvnitř šifrovaného bloku a klíč server nemá. Kontroluje se jen to,
+ * co server sám používá: komu záznam patří, jak se adresuje a kdy se změnil.
  */
-const ProjectBody = z.object({
-  id: z.string().min(1).max(128),
-  name: z.string().max(500),
-  icon: z.string().max(200_000).optional(),
-  tag: z.string().max(200).default(""),
-  priority: z.string().max(100).default(""),
-  status: z.string().max(100).default(""),
-  progress: z.number().int().min(0).max(100).default(0),
-  deadline: z.string().nullable().default(null),
-  deadlineTime: z.string().nullable().optional(),
-  createdAt: z.string(),
-  lastEditedAt: z.string(),
-  rootDocumentId: z.string().max(128),
-  documentIds: z.array(z.string().max(128)).max(5000).default([]),
-  isFavorite: z.boolean().default(false),
-  folderId: z.string().max(128).nullable().default(null),
-  tagIds: z.array(z.string().max(128)).max(500).default([]),
-});
 
-const DocumentBody = z.object({
+/// Ciphertext může být velký (dokument s dlouhým textem), strop je hrubá
+/// pojistka proti zaplnění databáze jedním requestem.
+const Ciphertext = z.string().min(1).max(20_000_000);
+const Nonce = z.string().min(1).max(64);
+
+const EnvelopeBody = z.object({
   id: z.string().min(1).max(128),
-  projectId: z.string().max(128).nullable().default(null),
-  name: z.string().max(500),
-  description: z.string().max(5000).default(""),
-  icon: z.string().max(200_000).optional(),
   createdAt: z.string(),
   updatedAt: z.string(),
-  lastMode: z.string().max(20).default("text"),
-  folderId: z.string().max(128).nullable().default(null),
-  tagIds: z.array(z.string().max(128)).max(500).default([]),
-  isFavorite: z.boolean().default(false),
-  isLocked: z.boolean().optional(),
-  smallText: z.boolean().optional(),
-  showTableOfContents: z.boolean().optional(),
-  theme: z.unknown().optional(),
-  text: z.unknown(),
-  sketch: z.unknown(),
-  style: z.unknown().optional(),
+  ciphertext: Ciphertext,
+  nonce: Nonce,
 });
 
 export async function SyncRoutes(app: FastifyInstance): Promise<void> {
   app.addHook("preHandler", app.Authenticate);
 
-  /**
-   * Bootstrap při startu aplikace — vše, z čeho se hydratuje store, jedním
-   * requestem. Odpovídá `DataStorageAdapter.LoadAll()`.
-   */
+  /** Bootstrap při startu — vše, co si klient dešifruje a nahydratuje do storu. */
   app.get("/sync", async (request, reply) => {
     const userId = request.user.sub;
     const [projects, documents] = await Promise.all([
@@ -64,50 +35,50 @@ export async function SyncRoutes(app: FastifyInstance): Promise<void> {
     ]);
 
     return reply.send({
-      projects: projects.map(ToClientProject),
-      documents: documents.map(ToClientDocument),
+      projects: projects.map((row) => ({
+        id: row.clientId,
+        createdAt: row.createdAt.toISOString(),
+        updatedAt: row.lastEditedAt.toISOString(),
+        ciphertext: row.ciphertext,
+        nonce: row.nonce,
+      })),
+      documents: documents.map((row) => ({
+        id: row.clientId,
+        createdAt: row.createdAt.toISOString(),
+        updatedAt: row.updatedAt.toISOString(),
+        ciphertext: row.ciphertext,
+        nonce: row.nonce,
+      })),
     });
   });
 
   app.put("/projects/:id", async (request, reply) => {
-    const parsed = ProjectBody.safeParse(request.body);
+    const parsed = EnvelopeBody.safeParse(request.body);
     if (!parsed.success) {
       return reply.code(400).send({ error: parsed.error.issues[0]?.message ?? "Neplatný projekt." });
     }
     const body = parsed.data;
-    const userId = request.user.sub;
 
-    // Cesta v URL musí sedět s tělem — jinak by se dal přepsat cizí záznam
-    // podstrčením jiného id v těle.
+    // Cesta v URL musí sedět s tělem — jinak by se dal přepsat jiný záznam
+    // podstrčením odlišného id uvnitř.
     if ((request.params as { id: string }).id !== body.id) {
       return reply.code(400).send({ error: "ID v adrese a v těle se neshodují." });
     }
 
     const data = {
-      name: body.name,
-      icon: body.icon ?? null,
-      tag: body.tag,
-      priority: body.priority,
-      status: body.status,
-      progress: body.progress,
-      deadline: body.deadline,
-      deadlineTime: body.deadlineTime ?? null,
       createdAt: new Date(body.createdAt),
-      lastEditedAt: new Date(body.lastEditedAt),
-      rootDocumentId: body.rootDocumentId,
-      documentIds: body.documentIds,
-      isFavorite: body.isFavorite,
-      folderId: body.folderId,
-      tagIds: body.tagIds,
+      lastEditedAt: new Date(body.updatedAt),
+      ciphertext: body.ciphertext,
+      nonce: body.nonce,
     };
 
-    const row = await app.prisma.project.upsert({
-      where: { userId_clientId: { userId, clientId: body.id } },
-      create: { userId, clientId: body.id, ...data },
+    await app.prisma.project.upsert({
+      where: { userId_clientId: { userId: request.user.sub, clientId: body.id } },
+      create: { userId: request.user.sub, clientId: body.id, ...data },
       update: data,
     });
 
-    return reply.send(ToClientProject(row));
+    return reply.code(204).send();
   });
 
   app.delete("/projects/:id", async (request, reply) => {
@@ -119,46 +90,32 @@ export async function SyncRoutes(app: FastifyInstance): Promise<void> {
   });
 
   app.put("/documents/:id", async (request, reply) => {
-    const parsed = DocumentBody.safeParse(request.body);
+    const parsed = EnvelopeBody.safeParse(request.body);
     if (!parsed.success) {
       return reply
         .code(400)
         .send({ error: parsed.error.issues[0]?.message ?? "Neplatný dokument." });
     }
     const body = parsed.data;
-    const userId = request.user.sub;
 
     if ((request.params as { id: string }).id !== body.id) {
       return reply.code(400).send({ error: "ID v adrese a v těle se neshodují." });
     }
 
     const data = {
-      projectId: body.projectId,
-      name: body.name,
-      description: body.description,
-      icon: body.icon ?? null,
       createdAt: new Date(body.createdAt),
       updatedAt: new Date(body.updatedAt),
-      lastMode: body.lastMode,
-      folderId: body.folderId,
-      tagIds: body.tagIds,
-      isFavorite: body.isFavorite,
-      isLocked: body.isLocked ?? false,
-      smallText: body.smallText ?? false,
-      showTableOfContents: body.showTableOfContents ?? false,
-      theme: (body.theme ?? null) as never,
-      text: (body.text ?? {}) as never,
-      sketch: (body.sketch ?? { strokes: [] }) as never,
-      style: (body.style ?? null) as never,
+      ciphertext: body.ciphertext,
+      nonce: body.nonce,
     };
 
-    const row = await app.prisma.document.upsert({
-      where: { userId_clientId: { userId, clientId: body.id } },
-      create: { userId, clientId: body.id, ...data },
+    await app.prisma.document.upsert({
+      where: { userId_clientId: { userId: request.user.sub, clientId: body.id } },
+      create: { userId: request.user.sub, clientId: body.id, ...data },
       update: data,
     });
 
-    return reply.send(ToClientDocument(row));
+    return reply.code(204).send();
   });
 
   app.delete("/documents/:id", async (request, reply) => {
@@ -170,21 +127,24 @@ export async function SyncRoutes(app: FastifyInstance): Promise<void> {
   });
 
   /**
-   * Drobné kolekce (složky, tagy, poznámky, rozložení sidebaru, UI stav) —
-   * odpovídá `KeyValueAdapter`. Klient sem posílá už zserializovaný JSON
-   * řetězec, přesně jak ho vyrobí zustand `persist`.
+   * Drobné kolekce (složky, štítky, poznámky, rozložení sidebaru, UI stav).
+   * `name` a `key` jsou konstanty z kódu, ne uživatelská data, takže zůstávají
+   * čitelné; `value` je zašifrovaný stejným hlavním klíčem jako dokumenty.
    */
   app.get("/collections/:name/:key", async (request, reply) => {
     const { name, key } = request.params as { name: string; key: string };
     const row = await app.prisma.collection.findUnique({
       where: { userId_name_key: { userId: request.user.sub, name, key } },
     });
-    return reply.send({ value: row?.value ?? null });
+    if (!row) return reply.send({ value: null, nonce: null });
+    return reply.send({ value: row.value, nonce: row.nonce });
   });
 
   app.put("/collections/:name/:key", async (request, reply) => {
     const { name, key } = request.params as { name: string; key: string };
-    const parsed = z.object({ value: z.string().max(20_000_000) }).safeParse(request.body);
+    const parsed = z
+      .object({ value: Ciphertext, nonce: Nonce })
+      .safeParse(request.body);
     if (!parsed.success) {
       return reply.code(400).send({ error: "Chybí hodnota, nebo je moc velká." });
     }
@@ -192,8 +152,8 @@ export async function SyncRoutes(app: FastifyInstance): Promise<void> {
 
     await app.prisma.collection.upsert({
       where: { userId_name_key: { userId, name, key } },
-      create: { userId, name, key, value: parsed.data.value },
-      update: { value: parsed.data.value },
+      create: { userId, name, key, value: parsed.data.value, nonce: parsed.data.nonce },
+      update: { value: parsed.data.value, nonce: parsed.data.nonce },
     });
 
     return reply.code(204).send();

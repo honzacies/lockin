@@ -11,6 +11,7 @@ import { usePathname, useRouter } from "next/navigation";
 import { AppShell } from "@lockin/shared/Components/AppShell/AppShell";
 import { GetSessionUser, OnSessionChange, type SessionUser } from "@/Platform/Session";
 import { AccountMenu } from "./AccountMenu";
+import { PassphraseGate } from "./PassphraseGate";
 import { MigrationPrompt } from "./MigrationPrompt";
 
 /**
@@ -31,7 +32,12 @@ import { MigrationPrompt } from "./MigrationPrompt";
 const REQUIRE_LOGIN = true;
 
 /** Stránky dostupné i bez přihlášení, renderované bez sidebaru a topbaru. */
-const PUBLIC_ROUTES = ["/Login", "/Register"];
+const PUBLIC_ROUTES = [
+  "/Login",
+  "/Register",
+  // Ověření krypto vrstvy — jen ve vývoji, v produkci se na ni nedostaneš.
+  ...(process.env.NODE_ENV === "development" ? ["/CryptoCheck"] : []),
+];
 
 export function WebShell({ children }: { children: ReactNode }) {
   const pathname = usePathname();
@@ -73,10 +79,12 @@ export function WebShell({ children }: { children: ReactNode }) {
     return <div className="flex min-h-screen flex-col bg-white" />;
   }
 
+  // PassphraseGate stojí NAD AppShellem schválně: ten při připojení spustí
+  // načítání dat, a to by bez odemčeného klíče stejně nešlo dešifrovat.
   return (
-    <>
+    <PassphraseGate>
       <AppShell sidebarFooter={<AccountMenu />}>{children}</AppShell>
       {user ? <MigrationPrompt user={user} /> : null}
-    </>
+    </PassphraseGate>
   );
 }

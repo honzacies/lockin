@@ -5,21 +5,6 @@ import path from "node:path";
 import type { FastifyInstance } from "fastify";
 import { Env } from "../Env.js";
 
-const ALLOWED_PREFIXES = ["image/", "video/"];
-
-/** Přípona se bere z deklarovaného MIME, ne z názvu souboru od klienta. */
-const MIME_EXTENSION: Record<string, string> = {
-  "image/png": ".png",
-  "image/jpeg": ".jpg",
-  "image/gif": ".gif",
-  "image/webp": ".webp",
-  "image/avif": ".avif",
-  "image/svg+xml": ".svg",
-  "video/mp4": ".mp4",
-  "video/webm": ".webm",
-  "video/quicktime": ".mov",
-};
-
 export async function MediaRoutes(app: FastifyInstance): Promise<void> {
   app.addHook("preHandler", app.Authenticate);
 
@@ -45,10 +30,6 @@ export async function MediaRoutes(app: FastifyInstance): Promise<void> {
     const file = await request.file({ limits: { fileSize: Env.MAX_UPLOAD_BYTES } });
     if (!file) return reply.code(400).send({ error: "Chybí soubor." });
 
-    if (!ALLOWED_PREFIXES.some((prefix) => file.mimetype.startsWith(prefix))) {
-      return reply.code(415).send({ error: "Nahrát jde jen obrázek nebo video." });
-    }
-
     const buffer = await file.toBuffer().catch(() => null);
     if (!buffer) {
       return reply
@@ -61,17 +42,17 @@ export async function MediaRoutes(app: FastifyInstance): Promise<void> {
       return reply.code(413).send({ error: "Soubor by přesáhl tvoji úložnou kvótu." });
     }
 
-    const extension = MIME_EXTENSION[file.mimetype] ?? "";
+    // Žádná přípona — obsah je šifrovaný a server netuší, co v něm je.
     // storageKey je serverové jméno, clientPath je to, co jde do dokumentu.
     // Rozdělené schválně: cesta od klienta nikdy neurčuje, kam se zapisuje.
-    const storageKey = `${userId}-${Date.now()}-${randomBytes(6).toString("hex")}${extension}`;
-    const clientPath = `Media/media-${Date.now()}-${randomBytes(3).toString("hex")}${extension}`;
+    const storageKey = `${userId}-${Date.now()}-${randomBytes(6).toString("hex")}.bin`;
+    const clientPath = `Media/media-${Date.now()}-${randomBytes(3).toString("hex")}.bin`;
 
     await writeFile(path.join(Env.MEDIA_DIR, storageKey), buffer);
 
     await app.prisma.$transaction([
       app.prisma.mediaFile.create({
-        data: { userId, path: clientPath, storageKey, mime: file.mimetype, bytes },
+        data: { userId, path: clientPath, storageKey, bytes },
       }),
       app.prisma.user.update({
         where: { id: userId },
@@ -101,8 +82,10 @@ export async function MediaRoutes(app: FastifyInstance): Promise<void> {
       return reply.code(404).send({ error: "Soubor na disku chybí." });
     }
 
+    // Vždycky octet-stream: skutečný typ je uvnitř šifrované hlavičky, kterou
+    // umí přečíst jedině klient.
     return reply
-      .type(row.mime)
+      .type("application/octet-stream")
       .header("Cache-Control", "private, max-age=31536000, immutable")
       .send(createReadStream(absolute));
   });

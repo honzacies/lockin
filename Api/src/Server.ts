@@ -7,6 +7,7 @@ import PrismaPlugin from "./Plugins/Prisma.js";
 import AuthPlugin from "./Plugins/Auth.js";
 import { AuthRoutes } from "./Routes/Auth.js";
 import { SyncRoutes } from "./Routes/Sync.js";
+import { KeyRoutes } from "./Routes/Keys.js";
 import { MediaRoutes } from "./Routes/Media.js";
 import { AdminRoutes } from "./Routes/Admin.js";
 
@@ -57,6 +58,7 @@ await app.register(async (scope) => {
   await scope.register(AuthRoutes);
 });
 
+await app.register(KeyRoutes);
 await app.register(SyncRoutes);
 await app.register(MediaRoutes);
 await app.register(AdminRoutes);
