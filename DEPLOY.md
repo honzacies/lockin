@@ -3,9 +3,11 @@
 Návod pro server popsaný v `honza-dev-server.md` — Hetzner CX33, Ubuntu 24.04,
 4 vCPU / 8 GB RAM / 80 GB disk, IPv4 `91.99.239.107`.
 
-Předpokládá stav, ve kterém server podle té poznámky je: běží, SSH klíč
-nahraný, **žádný firewall, žádný Docker, root login zapnutý**. Kroky 1–3 tenhle
-stav srovnají; když už jsi je udělal, přeskoč na krok 4.
+Stav k 10. 9. 2026: server běží, **SSH klíče vyřešené** (root i `reyn`),
+**firewall nastavený** (porty 22, 80, 443). Kroky 1 a 2 jsou tedy hotové a
+jsou tu jen pro referenci — začni krokem 3.
+
+Domény: **`lockinapi.honzacies.dev`** (API) a **`lockin.honzacies.dev`** (web).
 
 ---
 
@@ -142,7 +144,7 @@ Do `Api/.env` (ten je v `.gitignore`, do repozitáře se nedostane):
 ```
 POSTGRES_PASSWORD=<první vygenerovaný>
 JWT_SECRET=<druhý vygenerovaný>
-CORS_ORIGINS=https://lockin.honzacs.dev
+CORS_ORIGINS=https://lockin.honzacies.dev
 DEFAULT_STORAGE_QUOTA_BYTES=2147483648
 MAX_UPLOAD_BYTES=52428800
 ```
@@ -211,11 +213,11 @@ sudo apt install -y caddy
 `/etc/caddy/Caddyfile`:
 
 ```
-api.honzacs.dev {
+lockinapi.honzacies.dev {
     reverse_proxy 127.0.0.1:4000
 }
 
-lockin.honzacs.dev {
+lockin.honzacies.dev {
     reverse_proxy 127.0.0.1:3001
 }
 ```
@@ -229,8 +231,8 @@ každý svůj port.
 
 ## 10. Doména a Cloudflare
 
-1. Kup `honzacs.dev` na Cloudflare.
-2. Přidej A záznamy `api` a `lockin` na `91.99.239.107`, oba **s oranžovým
+1. `honzacies.dev` je na Cloudflare.
+2. Přidej A záznamy `lockinapi` a `lockin` na `91.99.239.107`, oba **s oranžovým
    mráčkem** (proxy zapnutá) — origin IP tak zůstane skrytá.
 3. SSL/TLS režim nastav na **Full (strict)**. Flexible by znamenal
    nešifrovaný provoz mezi Cloudflare a serverem.

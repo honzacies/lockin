@@ -32,11 +32,18 @@ async function AuthPlugin(app: FastifyInstance): Promise<void> {
     sign: { expiresIn: Env.ACCESS_TOKEN_TTL },
   });
 
+  // `return reply` je tu podstatné, ne kosmetika. Async preHandler zastaví
+  // request jen tehdy, když se `reply.send()` stihne zavolat dřív, než se
+  // promise vyřeší — a vrácení `reply` je způsob, jak to Fastify říct
+  // jednoznačně. Bez toho hrozí, že se handler přesto spustí a neověřený
+  // request projde (viz fastify/docs/Reference/Hooks.md, „Respond to a
+  // request from a hook").
   app.decorate("Authenticate", async (request: FastifyRequest, reply: FastifyReply) => {
     try {
       await request.jwtVerify();
     } catch {
       await reply.code(401).send({ error: "Přihlášení vypršelo nebo chybí." });
+      return reply;
     }
   });
 
@@ -45,11 +52,12 @@ async function AuthPlugin(app: FastifyInstance): Promise<void> {
       await request.jwtVerify();
     } catch {
       await reply.code(401).send({ error: "Přihlášení vypršelo nebo chybí." });
-      return;
+      return reply;
     }
     if (request.user.role !== "ADMIN") {
       // Schválně 403 a ne 404 — uživatel je ověřený, jen na tohle nemá právo.
       await reply.code(403).send({ error: "Nemáte oprávnění." });
+      return reply;
     }
   });
 }

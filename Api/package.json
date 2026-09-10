@@ -13,7 +13,8 @@
     "prisma:deploy": "prisma migrate deploy",
     "prisma:studio": "prisma studio",
     "seed:admin": "tsx src/Scripts/CreateAdmin.ts",
-    "seed:admin:prod": "node dist/Scripts/CreateAdmin.js"
+    "seed:admin:prod": "node dist/Scripts/CreateAdmin.js",
+    "verify:auth": "tsx src/Scripts/VerifyAuth.ts"
   },
   "dependencies": {
     "@fastify/cors": "^11.0.1",
