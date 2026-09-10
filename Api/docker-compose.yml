@@ -1,0 +1,61 @@
+# LockIn API — Postgres + API server.
+#
+# Na serveru poběží vedle dalších projektů, proto:
+#  - Postgres NEVYSTAVUJE port ven (žádné `ports:`), mluví s ním jen API
+#    přes interní síť. Jediná cesta zvenčí je API.
+#  - API poslouchá jen na localhostu; před ním stojí Caddy, který dělá HTTPS
+#    a routuje podle subdomény.
+#  - Vlastní pojmenovaná síť, aby se kontejnery ostatních projektů na tuhle
+#    databázi nedostaly.
+
+services:
+  postgres:
+    image: postgres:17-alpine
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER:-lockin}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?POSTGRES_PASSWORD musí být nastavené}
+      POSTGRES_DB: ${POSTGRES_DB:-lockin}
+    volumes:
+      - postgres-data:/var/lib/postgresql/data
+    networks:
+      - lockin
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-lockin} -d ${POSTGRES_DB:-lockin}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  api:
+    build: .
+    restart: unless-stopped
+    depends_on:
+      postgres:
+        condition: service_healthy
+    environment:
+      NODE_ENV: production
+      PORT: 4000
+      HOST: 0.0.0.0
+      DATABASE_URL: postgresql://${POSTGRES_USER:-lockin}:${POSTGRES_PASSWORD}@postgres:5432/${POSTGRES_DB:-lockin}?schema=public
+      JWT_SECRET: ${JWT_SECRET:?JWT_SECRET musí být nastavený}
+      ACCESS_TOKEN_TTL: ${ACCESS_TOKEN_TTL:-15m}
+      REFRESH_TOKEN_TTL_DAYS: ${REFRESH_TOKEN_TTL_DAYS:-30}
+      CORS_ORIGINS: ${CORS_ORIGINS:?CORS_ORIGINS musí být nastavené}
+      MEDIA_DIR: /data/media
+      MAX_UPLOAD_BYTES: ${MAX_UPLOAD_BYTES:-52428800}
+      DEFAULT_STORAGE_QUOTA_BYTES: ${DEFAULT_STORAGE_QUOTA_BYTES:-2147483648}
+    volumes:
+      - media-data:/data/media
+    # Jen na localhost — ven se ven dostane výhradně přes Caddy.
+    ports:
+      - "127.0.0.1:4000:4000"
+    networks:
+      - lockin
+
+volumes:
+  postgres-data:
+  media-data:
+
+networks:
+  lockin:
+    driver: bridge
