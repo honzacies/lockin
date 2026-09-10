@@ -1,0 +1,47 @@
+{
+  "name": "@lockin/shared",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "typecheck": "tsc --noEmit"
+  },
+  "dependencies": {
+    "@heroui/react": "^3.2.3",
+    "@heroui/styles": "^3.2.3",
+    "@internationalized/date": "^3.12.4",
+    "@tiptap/core": "^3.30.3",
+    "@tiptap/extension-bullet-list": "^3.30.3",
+    "@tiptap/extension-placeholder": "^3.30.3",
+    "@tiptap/extension-table": "^3.30.3",
+    "@tiptap/extension-table-cell": "^3.30.3",
+    "@tiptap/extension-table-header": "^3.30.3",
+    "@tiptap/extension-table-row": "^3.30.3",
+    "@tiptap/extension-task-item": "^3.30.3",
+    "@tiptap/extension-task-list": "^3.30.3",
+    "@tiptap/extension-text-align": "^3.30.3",
+    "@tiptap/extension-text-style": "^3.30.3",
+    "@tiptap/pm": "^3.30.3",
+    "@tiptap/react": "^3.30.3",
+    "@tiptap/starter-kit": "^3.30.3",
+    "@tiptap/suggestion": "^3.30.3",
+    "lucide-react": "^1.28.0",
+    "marked": "^18.0.10",
+    "tailwindcss": "^4",
+    "zustand": "^5.0.14"
+  },
+  "peerDependencies": {
+    "next": ">=16",
+    "react": ">=19",
+    "react-dom": ">=19"
+  },
+  "devDependencies": {
+    "@types/node": "^20",
+    "@types/react": "^19",
+    "@types/react-dom": "^19",
+    "next": "16.2.12",
+    "react": "19.2.4",
+    "react-dom": "19.2.4",
+    "typescript": "^5"
+  }
+}
