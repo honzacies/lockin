@@ -24,7 +24,7 @@ export function BlockSettingsPortal({
 }) {
   if (!open || !portalNode) return null;
   return createPortal(
-    <div className="flex flex-col gap-2">
+    <div className="flex select-none flex-col gap-2">
       <div className="flex items-center justify-between border-b border-[#f0efed] px-3 py-2.5">
         <span className="text-[13px] font-medium text-[#2c2c2b]">{title}</span>
         <Button

@@ -114,6 +114,46 @@ export function TodoListView({
   const showHeader = style.showTitle || style.showIcon;
   const showFooter = style.showProgress || style.showDeadline;
 
+  // The header sticks to the top of the scroll container while the list is
+  // on screen (plain CSS `position: sticky`, so it lets go on its own once
+  // the list scrolls past). JS only answers "is it stuck right now?", for the
+  // border/shadow that make it read as a bar — CSS scroll-state queries could
+  // do that, but Shared/ also runs on the web build, where Firefox/Safari
+  // don't support them.
+  //
+  // A 1px sentinel marks where the header's top edge naturally is. A stuck
+  // sticky element sits *below* its natural spot, so any gap between the two
+  // means sticky is active — measured directly instead of via an
+  // IntersectionObserver, which needs the right scroll container as its root
+  // and, inside the editor, a node view already attached to the page. An
+  // earlier IntersectionObserver version stuck in the dev browser but never
+  // flipped inside the Tauri window.
+  const stickySentinelRef = useRef<HTMLDivElement | null>(null);
+  const stickyHeaderRef = useRef<HTMLDivElement | null>(null);
+  const [headerStuck, setHeaderStuck] = useState(false);
+
+  useEffect(() => {
+    function Measure() {
+      const sentinel = stickySentinelRef.current;
+      const header = stickyHeaderRef.current;
+      if (!sentinel || !header) return;
+      const displacement =
+        header.getBoundingClientRect().top - sentinel.getBoundingClientRect().top;
+      setHeaderStuck(displacement > 0.5);
+    }
+
+    Measure();
+    // `scroll` doesn't bubble, but a capture-phase listener on `document`
+    // still sees it from every scroll container on the page — so it doesn't
+    // matter which one this list happens to live in.
+    document.addEventListener("scroll", Measure, { capture: true, passive: true });
+    window.addEventListener("resize", Measure);
+    return () => {
+      document.removeEventListener("scroll", Measure, { capture: true });
+      window.removeEventListener("resize", Measure);
+    };
+  }, []);
+
   /** Which task (or empty group background) the pointer is currently over,
    * and which edge — drives both the "drop before/after" indicator line and
    * the actual move on release. Scans ungrouped tasks first, then each
@@ -307,7 +347,7 @@ export function TodoListView({
         <Checkbox
           isSelected={task.done}
           onChange={() => onToggleTask(task.id, groupId)}
-          className="group/checkbox mt-0.5 flex shrink-0 items-center"
+          className="group/checkbox relative mt-0.5 flex shrink-0 items-center"
         >
           <Checkbox.Content className="contents">
             <Checkbox.Control
@@ -362,9 +402,41 @@ export function TodoListView({
       // matter how deep (a task row, a group card, ...), fades its
       // placeholder in via `group-hover:`, which matches *any* ancestor
       // with this class, not just the nearest one.
-      className={`group flex w-full flex-col gap-4 ${isSolid ? "rounded-2xl bg-[#f9f8f7] p-4" : ""}`}
+      className={`group relative flex w-full flex-col gap-4 ${isSolid ? "rounded-2xl bg-[#f9f8f7] p-4" : ""}`}
     >
-      <div className="flex items-center justify-between">
+      {/* Sticky-header sentinel (see headerStuck above). Absolutely
+        * positioned so it doesn't become a flex child and add an extra
+        * `gap-4` of space. Offset to the header's natural border-box top:
+        * the card padding (solid only) minus the header's `-my-1`. */}
+      <div
+        ref={stickySentinelRef}
+        aria-hidden
+        className={`pointer-events-none absolute inset-x-0 h-px ${isSolid ? "top-3" : "-top-1"}`}
+      />
+
+      {/* `-mx-2 px-2 -my-1 py-1` keeps the layout exactly where it was while
+        * giving the stuck bar some breathing room around its contents; the
+        * border is always there (transparent until stuck) so toggling it
+        * doesn't shift anything by a pixel.
+        *
+        * Background: a solid list gets the card color *permanently* —
+        * invisible while the header sits in place, and it covers the rows
+        * scrolling underneath from the very first frame, with no dependence on
+        * `headerStuck` having caught up. A transparent list can't do that (a
+        * gray box would show around its header at rest), so there it follows
+        * the stuck state — deliberately without a transition, so text never
+        * shows through a half-faded bar.
+        *
+        * `z-20`: HeroUI's `checkbox__indicator` carries `z-index: 10`, so with
+        * anything lower the task checkboxes scrolling underneath would paint
+        * over the bar *and* take its clicks. Still below Popover panels
+        * (z-30), so a picker opened near the top lands over the bar. */}
+      <div
+        ref={stickyHeaderRef}
+        className={`sticky top-2 z-20 -mx-2 -my-1 flex items-center justify-between rounded-xl border px-2 py-1 transition-[border-color,box-shadow] duration-150 ${
+          isSolid || headerStuck ? "bg-[#f9f8f7]" : ""
+        } ${headerStuck ? "border-[#f0efed] shadow-sm" : "border-transparent"}`}
+      >
         {showHeader ? (
           <div className="flex items-center gap-1.5">
             {style.showIcon ? (
@@ -482,10 +554,14 @@ export function TodoListView({
             >
               <div className="flex items-center justify-between">
                 <div className="flex items-center gap-1">
+                  {/* A ~19px emoji in a 24px box: a notch bigger than the
+                    * 14px group title, without the default half-size glyph's
+                    * padding opening up a gap before the title. */}
                   <IconPicker
                     icon={group.icon}
                     onChange={(icon) => onChangeGroupIcon(group.id, icon)}
-                    size={32}
+                    size={24}
+                    glyphScale={0.8}
                     placeholderOnlyOnHover
                   />
                   <InlineEditable

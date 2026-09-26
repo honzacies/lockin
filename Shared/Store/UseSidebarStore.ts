@@ -2,10 +2,10 @@ import { create } from "zustand";
 import { persist, createJSONStorage } from "zustand/middleware";
 import { CreatePersistStorage } from "@lockin/shared/Platform/PersistStorage";
 
-export type SidebarNavId = "quick-notes" | "library" | "your-projects";
+export type SidebarNavId = "quick-notes" | "library" | "your-projects" | "graph" | "canvas";
 export type SidebarSectionId = "recents" | "favorites" | "folders" | "tags";
 
-const DEFAULT_NAV_ORDER: SidebarNavId[] = ["quick-notes", "library", "your-projects"];
+const DEFAULT_NAV_ORDER: SidebarNavId[] = ["quick-notes", "library", "your-projects", "graph", "canvas"];
 const DEFAULT_SECTION_ORDER: SidebarSectionId[] = ["recents", "favorites", "folders", "tags"];
 
 function Move<T>(list: T[], id: T, direction: "up" | "down"): T[] {
@@ -27,6 +27,9 @@ interface SidebarLayoutState {
   hiddenNav: SidebarNavId[];
   sectionOrder: SidebarSectionId[];
   hiddenSections: SidebarSectionId[];
+  /** Složky rozbalené přímo v sidebaru (strom). */
+  expandedFolders: string[];
+  ToggleFolderExpanded: (id: string) => void;
   MoveNav: (id: SidebarNavId, direction: "up" | "down") => void;
   ToggleNavHidden: (id: SidebarNavId) => void;
   MoveSection: (id: SidebarSectionId, direction: "up" | "down") => void;
@@ -42,6 +45,9 @@ export const UseSidebarStore = create<SidebarLayoutState>()(
       hiddenNav: [],
       sectionOrder: DEFAULT_SECTION_ORDER,
       hiddenSections: [],
+      expandedFolders: [],
+      ToggleFolderExpanded: (id) =>
+        set((state) => ({ expandedFolders: Toggle(state.expandedFolders, id) })),
       MoveNav: (id, direction) =>
         set((state) => ({ navOrder: Move(state.navOrder, id, direction) })),
       ToggleNavHidden: (id) =>
@@ -55,6 +61,17 @@ export const UseSidebarStore = create<SidebarLayoutState>()(
       name: "lockin-sidebar-layout",
       storage: createJSONStorage(() => CreatePersistStorage("sidebar-layout.json")),
       skipHydration: true,
+      // Uložené pořadí z doby před novou položkou (např. Graph) ji nezná —
+      // chybějící se doplní na konec, jinak by se nikdy neukázala.
+      merge: (persisted, current) => {
+        const saved = persisted as Partial<SidebarLayoutState> | undefined;
+        const navOrder = saved?.navOrder ?? current.navOrder;
+        return {
+          ...current,
+          ...saved,
+          navOrder: [...navOrder, ...DEFAULT_NAV_ORDER.filter((id) => !navOrder.includes(id))],
+        };
+      },
     },
   ),
 );

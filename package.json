@@ -5,7 +5,8 @@
   "workspaces": [
     "Shared",
     "TauriBuild",
-    "WebBuild"
+    "WebBuild",
+    "Mcp"
   ],
   "scripts": {
     "dev": "cd TauriBuild && bun run dev",
@@ -17,7 +18,8 @@
     "web:start": "cd WebBuild && bun run start",
     "api:dev": "cd Api && bun run dev",
     "api:build": "cd Api && bun run build",
-    "typecheck": "cd Shared && bun run typecheck && cd ../TauriBuild && bun run typecheck && cd ../WebBuild && bun run typecheck && cd ../Api && bun run typecheck"
+    "typecheck": "cd Shared && bun run typecheck && cd ../TauriBuild && bun run typecheck && cd ../WebBuild && bun run typecheck && cd ../Api && bun run typecheck && cd ../Mcp && bun run typecheck",
+    "mcp": "cd Mcp && bun index.ts"
   },
   "ignoreScripts": [
     "sharp",

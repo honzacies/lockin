@@ -70,6 +70,11 @@ const NoWindow: WindowAdapter = {
   Minimize() {},
   ToggleMaximize() {},
   StartDragging() {},
+  async ListMonitors() {
+    return [];
+  },
+  async OpenSessionWindow() {},
+  async SetSessionMini() {},
 };
 
 RegisterPlatform({

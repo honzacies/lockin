@@ -1,4 +1,5 @@
-import { getCurrentWindow } from "@tauri-apps/api/window";
+import { availableMonitors, getCurrentWindow, LogicalSize, primaryMonitor, PhysicalPosition } from "@tauri-apps/api/window";
+import { WebviewWindow } from "@tauri-apps/api/webviewWindow";
 import type { WindowAdapter } from "@lockin/shared/Platform/Types";
 
 /**
@@ -24,6 +25,12 @@ function SafeCall(action: (win: ReturnType<typeof getCurrentWindow>) => Promise<
   }
 }
 
+const SESSION_LABEL = "session";
+const SESSION_SIZE = { width: 340, height: 600 };
+const SESSION_MINI_SIZE = { width: 320, height: 52 };
+/** Odstup okna session od pravého horního rohu monitoru (logické px). */
+const SESSION_MARGIN = 24;
+
 export const TauriWindow: WindowAdapter = {
   isAvailable: true,
 
@@ -43,8 +50,62 @@ export const TauriWindow: WindowAdapter = {
     }
   },
 
-  Close: () => SafeCall((win) => win.close(), "close"),
+  // Bez tohohle by po zavření hlavního okna zůstala session viset a aplikace
+  // by běžela dál bez možnosti se k ní vrátit.
+  Close: () =>
+    SafeCall(async (win) => {
+      if (win.label !== SESSION_LABEL) await (await WebviewWindow.getByLabel(SESSION_LABEL))?.close();
+      await win.close();
+    }, "close"),
   Minimize: () => SafeCall((win) => win.minimize(), "minimize"),
   ToggleMaximize: () => SafeCall((win) => win.toggleMaximize(), "toggleMaximize"),
   StartDragging: () => SafeCall((win) => win.startDragging(), "startDragging"),
+
+  async ListMonitors() {
+    try {
+      const [monitors, primary] = await Promise.all([availableMonitors(), primaryMonitor()]);
+      return monitors.map((m, i) => `Monitor ${i + 1}${m.name === primary?.name ? " (primary)" : ""}`);
+    } catch {
+      return [];
+    }
+  },
+
+  async SetSessionMini(mini) {
+    const { width, height } = mini ? SESSION_MINI_SIZE : SESSION_SIZE;
+    await getCurrentWindow().setSize(new LogicalSize(width, height));
+  },
+
+  async OpenSessionWindow(monitorIndex) {
+    const monitors = await availableMonitors();
+    const monitor = monitors[monitorIndex] ?? monitors[0];
+    // Pozice se nastavuje fyzicky až po vytvoření — logické souřadnice při
+    // vytvoření se u monitorů s různým DPI přepočítávají špatným měřítkem.
+    const place = async (win: WebviewWindow) => {
+      if (!monitor) return;
+      const { position, size } = monitor.workArea;
+      const margin = Math.round(SESSION_MARGIN * monitor.scaleFactor);
+      // Skutečná šířka okna — v mini režimu je užší než SESSION_SIZE.
+      const { width } = await win.outerSize();
+      await win.setPosition(new PhysicalPosition(position.x + size.width - width - margin, position.y + margin));
+      await win.setFocus();
+    };
+
+    const existing = await WebviewWindow.getByLabel(SESSION_LABEL);
+    if (existing) return place(existing);
+
+    const win = new WebviewWindow(SESSION_LABEL, {
+      url: "/Todo/Session",
+      title: "Lockin session",
+      ...SESSION_SIZE,
+      alwaysOnTop: true,
+      decorations: false,
+      resizable: false,
+      visible: false,
+    });
+    await win.once("tauri://error", (event) => console.warn("Session window failed", event.payload));
+    await win.once("tauri://created", async () => {
+      await place(win);
+      await win.show();
+    });
+  },
 };

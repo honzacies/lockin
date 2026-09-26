@@ -10,14 +10,14 @@ import type {
   DocumentStyleConfig,
   DocumentSummary,
   Project,
-  SketchStroke,
+  SketchContent,
   StyleableBlockType,
 } from "@lockin/shared/Types/Project";
 import { ProjectHeader } from "./ProjectHeader";
 import { ProjectContents } from "./ProjectContents";
 import { DocumentModeToolbar } from "@lockin/shared/Components/AppShell/DocumentModeToolbar";
 import { RichTextEditor } from "@lockin/shared/Components/DocumentView/RichTextEditor";
-import { LazySketchMode } from "@lockin/shared/Components/DocumentView/LazySketchMode";
+import { DocumentCanvas } from "@lockin/shared/Components/DocumentView/DocumentCanvas";
 import { BlockStyleModal } from "@lockin/shared/Components/DocumentView/StyleEditor/BlockStyleModal";
 import { ProjectIcon } from "@lockin/shared/Components/Shared/ProjectIcon";
 import { SaveDocument } from "@lockin/shared/Lib/Storage";
@@ -139,8 +139,8 @@ export function ProjectView({
     ScheduleSave({ text: { json } });
   }
 
-  function HandleSketchChange(strokes: SketchStroke[]) {
-    ScheduleSave({ sketch: { strokes } });
+  function HandleSketchChange(sketch: SketchContent) {
+    ScheduleSave({ sketch });
   }
 
   // Applies a full BlockStyle for one block type, then persists it.
@@ -214,11 +214,7 @@ export function ProjectView({
             />
           </Tabs.Panel>
           <Tabs.Panel id="sketch" className="flex flex-1 flex-col">
-            <LazySketchMode
-              key={activeDocument.id}
-              initialStrokes={activeDocument.sketch.strokes}
-              onChange={HandleSketchChange}
-            />
+            <DocumentCanvas key={activeDocument.id} sketch={activeDocument.sketch} onChange={HandleSketchChange} />
           </Tabs.Panel>
         </div>
       </div>

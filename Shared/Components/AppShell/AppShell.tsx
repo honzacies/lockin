@@ -10,6 +10,9 @@ import { UsePriorityStore } from "@lockin/shared/Store/UsePriorityStore";
 import { UseTodoStore } from "@lockin/shared/Store/UseTodoStore";
 import { UseDataStore } from "@lockin/shared/Store/UseDataStore";
 import { UseSidebarStore } from "@lockin/shared/Store/UseSidebarStore";
+import { UseFocusStore } from "@lockin/shared/Store/UseFocusStore";
+import { UseGraphStore } from "@lockin/shared/Store/UseGraphStore";
+import { UseCanvasStore } from "@lockin/shared/Store/UseCanvasStore";
 import { LoadAllProjectsAndDocuments, RebuildIndex } from "@lockin/shared/Lib/Storage";
 import { SweepOrphanedMedia } from "@lockin/shared/Lib/MediaStorage";
 
@@ -37,11 +40,20 @@ export function AppShell({ children, sidebarFooter }: AppShellProps) {
     UseTodoStore.persist.rehydrate()?.catch((error: unknown) => {
       console.warn("UseTodoStore: rehydrate failed", error);
     });
-    UseDataStore.persist.rehydrate()?.catch((error: unknown) => {
+    const dataRehydrated = UseDataStore.persist.rehydrate()?.catch((error: unknown) => {
       console.warn("UseDataStore: rehydrate failed", error);
     });
     UseSidebarStore.persist.rehydrate()?.catch((error: unknown) => {
       console.warn("UseSidebarStore: rehydrate failed", error);
+    });
+    UseFocusStore.persist.rehydrate()?.catch((error: unknown) => {
+      console.warn("UseFocusStore: rehydrate failed", error);
+    });
+    UseGraphStore.persist.rehydrate()?.catch((error: unknown) => {
+      console.warn("UseGraphStore: rehydrate failed", error);
+    });
+    UseCanvasStore.persist.rehydrate()?.catch((error: unknown) => {
+      console.warn("UseCanvasStore: rehydrate failed", error);
     });
     // Rebuild the index from the underlying data before trusting it —
     // self-heals an index that drifted from reality (e.g. an entry dropped by
@@ -50,8 +62,18 @@ export function AppShell({ children, sidebarFooter }: AppShellProps) {
     RebuildIndex()
       .catch((error: unknown) => console.warn("RebuildIndex failed", error))
       .then(() => LoadAllProjectsAndDocuments())
-      .then(({ projects, documents }) => {
+      .then(({ projects, documents, folders }) => {
         UseDataStore.getState().HydrateProjectsAndDocuments(projects, documents);
+        // Složkový workspace: podsložky vaultu jako Library složky. Uložené
+        // (přejmenované, s ikonou) mají přednost před těmi z disku — proto až
+        // po rehydrataci, jinak by ji persist přepsal.
+        if (folders) {
+          Promise.resolve(dataRehydrated).then(() =>
+            UseDataStore.setState((state) => ({
+              folders: { ...Object.fromEntries(folders.map((f) => [f.id, f])), ...state.folders },
+            })),
+          );
+        }
         // Only now, with every document actually loaded, is it safe to say
         // a media file is truly unreferenced — see SweepOrphanedMedia's own
         // doc comment for why nothing removes these earlier.

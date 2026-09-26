@@ -3,7 +3,7 @@
 import { useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { Button } from "@heroui/react";
-import { FileText, Library, Rocket, X, Zap, type LucideIcon } from "lucide-react";
+import { FileText, Library, ListTodo, Rocket, Shapes, Waypoints, X, Zap, type LucideIcon } from "lucide-react";
 import { UseUiStore } from "@lockin/shared/Store/UseUiStore";
 import { ProjectIcon } from "@lockin/shared/Components/Shared/ProjectIcon";
 
@@ -13,6 +13,9 @@ const SPECIAL_TAB_ICON: Record<string, LucideIcon> = {
   "quick-notes": Zap,
   library: Library,
   "your-projects": Rocket,
+  todo: ListTodo,
+  graph: Waypoints,
+  canvas: Shapes,
 };
 
 const DRAG_THRESHOLD_PX = 4;

@@ -29,6 +29,8 @@ export function ContextMenu({ children, menu, className }: ContextMenuProps) {
 
   function HandleContextMenu(e: React.MouseEvent) {
     e.preventDefault();
+    // Vnořená menu (řádek uvnitř plochy s vlastním menu) — otevře se jen to nejvnitřnější.
+    e.stopPropagation();
     setPoint({ x: e.clientX, y: e.clientY });
   }
 
@@ -82,7 +84,7 @@ export function ContextMenu({ children, menu, className }: ContextMenuProps) {
           // that check doesn't look.
           data-marquee-ignore="true"
           style={{ position: "fixed", left: point.x, top: point.y }}
-          className="z-50 flex w-52 flex-col gap-px rounded-xl border border-[#f0efed] bg-white p-1 shadow-lg"
+          className="z-50 flex w-52 select-none flex-col gap-px rounded-xl border border-[#f0efed] bg-white p-1 shadow-lg"
         >
           {menu(() => setPoint(null))}
         </div>

@@ -26,6 +26,9 @@ import {
   ArrowDown,
   type LucideIcon,
   Notebook,
+  ListTodo,
+  Waypoints,
+  Shapes,
 } from "lucide-react";
 import { UseDataStore } from "@lockin/shared/Store/UseDataStore";
 import { DEFAULT_TAG_COLOR } from "@lockin/shared/Types/Library";
@@ -39,6 +42,8 @@ import { Skeleton } from "@lockin/shared/Components/Shared/Skeleton";
 import { Popover } from "@lockin/shared/Components/Shared/Popover";
 import { ContextMenu, ContextMenuItem, ContextMenuLabel } from "@lockin/shared/Components/Shared/ContextMenu";
 import { SidebarItemMenu, type SidebarItemKind } from "./SidebarItemMenu";
+import { WorkspaceSwitcher } from "./WorkspaceSwitcher";
+import { TodoSourcesSidebar } from "@lockin/shared/Components/Focus/TodoSourcesSidebar";
 import { CreateNewProject } from "@lockin/shared/Lib/CreateProject";
 import { CreateNewDocument } from "@lockin/shared/Lib/CreateDocument";
 import { RenameByKind } from "@lockin/shared/Lib/LibraryItemActions";
@@ -62,13 +67,33 @@ interface SidebarRowData {
   active?: boolean;
   /** Tag rows only — LibraryTag.color, applied to the fallback Hash icon. */
   color?: string;
+  /** Folder rows only — podsložky a dokumenty, rozbalují se přímo v sidebaru. */
+  children?: SidebarRowData[];
 }
 
 const NAV_META: Record<SidebarNavId, { href: string; icon: LucideIcon; label: string }> = {
   "quick-notes": { href: "/QuickNotes", icon: Zap, label: "Quick Notes" },
   library: { href: "/Library", icon: Library, label: "Library" },
   "your-projects": { href: "/YourProjects", icon: Rocket, label: "Your Projects" },
+  graph: { href: "/Graph", icon: Waypoints, label: "Graph" },
+  canvas: { href: "/Canvas", icon: Shapes, label: "Canvas" },
 };
+
+/** Přepínač režimu (Notes / To-do) nad navigací — režim se odvozuje z URL. */
+function ModeChip({ href, active, icon, children }: { href: string; active: boolean; icon: ReactNode; children: ReactNode }) {
+  return (
+    <Link
+      href={href}
+      aria-current={active ? "page" : undefined}
+      className={`flex items-center gap-1.5 rounded-[20px] px-2.5 py-[3px] text-sm ${
+        active ? "bg-black/[0.03] text-[#2c2c2b]" : "text-[#91918e] hover:bg-black/[0.03] hover:text-[#5f5e59]"
+      }`}
+    >
+      {icon}
+      {children}
+    </Link>
+  );
+}
 
 const SECTION_META: Record<SidebarSectionId, { icon: ReactNode; label: string }> = {
   recents: { icon: <Clock size={16} strokeWidth={1.5} />, label: "Recents" },
@@ -186,8 +211,10 @@ function SidebarRow({ item }: { item: SidebarRowData }) {
 
   const DefaultIcon: LucideIcon =
     item.kind === "folder" ? Folder : item.kind === "tag" ? Hash : item.kind === "project" ? Rocket : FileText;
+  const expanded = UseSidebarStore((s) => s.expandedFolders.includes(item.id));
+  const ToggleFolderExpanded = UseSidebarStore((s) => s.ToggleFolderExpanded);
 
-  return (
+  const row = (
     <ContextMenu
       menu={(close) => (
         <SidebarItemMenu
@@ -219,10 +246,19 @@ function SidebarRow({ item }: { item: SidebarRowData }) {
       ) : (
         <Link
           href={item.href}
+          onClick={(e) => {
+            // Složka se rozbaluje na místě, do Library vede "Manage folders".
+            if (!item.children) return;
+            e.preventDefault();
+            ToggleFolderExpanded(item.id);
+          }}
           className={`flex items-center gap-1.5 truncate rounded-lg px-1.5 py-0.5 text-[16px] ${
             item.active ? "bg-[#F1F0EF] text-[#0f0f0f]" : "text-[#5f5e59] hover:bg-black/[0.03]"
           }`}
         >
+          {item.children ? (
+            <ChevronDown size={14} className={`shrink-0 text-[#91918e] transition-transform ${expanded ? "" : "-rotate-90"}`} />
+          ) : null}
           {item.icon ?? (
             <DefaultIcon
               size={18}
@@ -234,6 +270,22 @@ function SidebarRow({ item }: { item: SidebarRowData }) {
         </Link>
       )}
     </ContextMenu>
+  );
+
+  if (!item.children) return row;
+  return (
+    <div className="flex flex-col gap-2">
+      {row}
+      {expanded ? (
+        <div className="ml-[13px] flex flex-col gap-2 border-l border-[#f0efed] pl-2">
+          {item.children.length === 0 ? (
+            <p className="px-1.5 text-[13px] text-[#c9c8c4]">Empty</p>
+          ) : (
+            item.children.map((child) => <SidebarRow key={`${child.kind}-${child.id}`} item={child} />)
+          )}
+        </div>
+      ) : null}
+    </div>
   );
 }
 
@@ -361,6 +413,7 @@ function RenderSidebarSection({
 
 export function Sidebar({ footer }: { footer?: ReactNode }) {
   const pathname = usePathname();
+  const todoMode = pathname?.startsWith("/Todo") ?? false;
   const searchParams = useSearchParams();
   const router = useRouter();
   const projects = UseDataStore((state) => state.projects);
@@ -432,13 +485,35 @@ export function Sidebar({ footer }: { footer?: ReactNode }) {
 
   const favoriteDocs = Object.values(documents).filter((doc) => doc.isFavorite).map(ToRow);
 
-  const folderItems: SidebarRowData[] = Object.values(folders).map((folder) => ({
-    id: folder.id,
-    kind: "folder",
-    label: folder.name,
-    href: `/Library?folderId=${folder.id}`,
-    active: urlFolderId === folder.id,
-  }));
+  // Strom: "resources/heroui" je podsložka "resources" (tak chodí složky
+  // z vaultu), v řádku se ukáže jen poslední část cesty.
+  const folderList = Object.values(folders);
+  const folderByName = new Map(folderList.map((folder) => [folder.name, folder]));
+  const ParentName = (name: string) => (name.includes("/") ? name.slice(0, name.lastIndexOf("/")) : null);
+  const ByLabel = (a: SidebarRowData, b: SidebarRowData) => a.label.localeCompare(b.label);
+
+  function ToFolderRow(folder: (typeof folderList)[number]): SidebarRowData {
+    const subfolders = folderList.filter((f) => ParentName(f.name) === folder.name).map(ToFolderRow).sort(ByLabel);
+    const docs = Object.values(documents).filter((doc) => doc.folderId === folder.id).map(ToRow).sort(ByLabel);
+    return {
+      id: folder.id,
+      kind: "folder",
+      label: folder.name.split("/").pop() || folder.name,
+      rawLabel: folder.name,
+      href: `/Library?folderId=${folder.id}`,
+      icon: folder.icon ? <ProjectIcon icon={folder.icon} size={18} /> : undefined,
+      active: urlFolderId === folder.id,
+      children: [...subfolders, ...docs],
+    };
+  }
+
+  const folderItems: SidebarRowData[] = folderList
+    .filter((folder) => {
+      const parent = ParentName(folder.name);
+      return !parent || !folderByName.has(parent);
+    })
+    .map(ToFolderRow)
+    .sort(ByLabel);
 
   const tagItems: SidebarRowData[] = Object.values(tags).map((tag) => ({
     id: tag.id,
@@ -485,14 +560,7 @@ export function Sidebar({ footer }: { footer?: ReactNode }) {
       <div className="flex h-[30px] items-center justify-between">
         <div className="flex items-center gap-[10px]">
           <div className="size-[30px] rounded-md bg-[#d9d9d9]" />
-          <div className="flex items-center gap-[5px] rounded-md px-[5px] py-1 hover:bg-black/[0.03]">
-            <div className="flex size-[25px] items-center justify-center rounded-[4px] bg-[#0088ff] text-sm font-semibold text-white">
-              H
-            </div>
-            <p className="text-[16px] font-semibold tracking-[-0.32px] text-black">
-              Your Workspace
-            </p>
-          </div>
+          <WorkspaceSwitcher />
         </div>
         <div className="flex items-center gap-2.5 text-[#91918e]">
           <Button
@@ -518,10 +586,12 @@ export function Sidebar({ footer }: { footer?: ReactNode }) {
 
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-1.5">
-          <div className="flex items-center gap-1.5 rounded-[20px] bg-black/[0.03] px-2.5 py-[3px] text-sm text-[#2c2c2b]">
-            <Notebook size={18} strokeWidth={1.5} />
+          <ModeChip href="/QuickNotes" active={!todoMode} icon={<Notebook size={18} strokeWidth={1.5} />}>
             Notes
-          </div>
+          </ModeChip>
+          <ModeChip href="/Todo" active={todoMode} icon={<ListTodo size={18} strokeWidth={1.5} />}>
+            To-do
+          </ModeChip>
         </div>
         <div className="flex items-center gap-2 text-[#91918e]">
           <Popover
@@ -572,6 +642,7 @@ export function Sidebar({ footer }: { footer?: ReactNode }) {
         </div>
       </div>
 
+      {todoMode ? <TodoSourcesSidebar /> : <>
       <nav className="flex w-full flex-col gap-2 px-[5px]">
         {visibleNav.map((id, index) => (
           <NavRow
@@ -617,6 +688,7 @@ export function Sidebar({ footer }: { footer?: ReactNode }) {
         <Plus size={16} />
         New
       </Button>
+      </>}
 
       {footer}
     </div>

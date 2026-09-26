@@ -1,4 +1,5 @@
 import type { DocumentRecord, Project } from "@lockin/shared/Types/Project";
+import type { LibraryFolder } from "@lockin/shared/Types/Library";
 
 /**
  * Vše, co se v LockIn liší podle prostředí, prochází těmito čtyřmi rozhraními.
@@ -9,7 +10,8 @@ import type { DocumentRecord, Project } from "@lockin/shared/Types/Project";
 /** Projekty a dokumenty — v Tauri jeden JSON soubor na entitu, na webu API. */
 export interface DataStorageAdapter {
   /** Bootstrap při startu — načte vše, z čeho se hydratuje store. */
-  LoadAll(): Promise<{ projects: Project[]; documents: DocumentRecord[] }>;
+  /** `folders` vrací jen složkový workspace (podsložky vaultu). */
+  LoadAll(): Promise<{ projects: Project[]; documents: DocumentRecord[]; folders?: LibraryFolder[] }>;
   SaveProject(project: Project): Promise<void>;
   LoadProject(id: string): Promise<Project | null>;
   DeleteProject(id: string): Promise<void>;
@@ -60,6 +62,12 @@ export interface WindowAdapter {
   Minimize(): void;
   ToggleMaximize(): void;
   StartDragging(): void;
+  /** Názvy monitorů v pořadí, v jakém je bere OpenSessionWindow. */
+  ListMonitors(): Promise<string[]>;
+  /** Otevře (nebo přesune) připnuté okno focus session na daný monitor. */
+  OpenSessionWindow(monitorIndex: number): Promise<void>;
+  /** Volá okno session samo na sebe — přepíná mezi plným panelem a mini lištou. */
+  SetSessionMini(mini: boolean): Promise<void>;
 }
 
 export interface Platform {

@@ -4,11 +4,12 @@ import { useEffect, useState } from "react";
 import { Button, Input, Tabs } from "@heroui/react";
 import type { JSONContent } from "@tiptap/react";
 import { ChevronDown, Clock } from "lucide-react";
-import type { DocumentMode, DocumentRecord, SketchStroke } from "@lockin/shared/Types/Project";
+import type { DocumentMode, DocumentRecord, SketchContent } from "@lockin/shared/Types/Project";
 import { DEFAULT_TAG_COLOR } from "@lockin/shared/Types/Library";
 import { DocumentModeToolbar } from "@lockin/shared/Components/AppShell/DocumentModeToolbar";
 import { RichTextEditor } from "@lockin/shared/Components/DocumentView/RichTextEditor";
-import { LazySketchMode } from "@lockin/shared/Components/DocumentView/LazySketchMode";
+import { LinkedFrom } from "@lockin/shared/Components/DocumentView/LinkedFrom";
+import { DocumentCanvas } from "@lockin/shared/Components/DocumentView/DocumentCanvas";
 import { Popover } from "@lockin/shared/Components/Shared/Popover";
 import { ContextMenuItem } from "@lockin/shared/Components/Shared/ContextMenu";
 import { UseDataStore } from "@lockin/shared/Store/UseDataStore";
@@ -137,8 +138,8 @@ export function StandaloneDocumentEditor({
     ScheduleSave({ text: { json } });
   }
 
-  function HandleSketchChange(strokes: SketchStroke[]) {
-    ScheduleSave({ sketch: { strokes } });
+  function HandleSketchChange(sketch: SketchContent) {
+    ScheduleSave({ sketch });
   }
 
   function CommitName() {
@@ -226,12 +227,10 @@ export function StandaloneDocumentEditor({
               locked={document.isLocked}
               themeForeground={document.theme?.foreground}
             />
+            <LinkedFrom document={document} compact={compact} />
           </Tabs.Panel>
           <Tabs.Panel id="sketch" className="flex flex-1 flex-col">
-            <LazySketchMode
-              initialStrokes={document.sketch.strokes}
-              onChange={HandleSketchChange}
-            />
+            <DocumentCanvas key={document.id} sketch={document.sketch} onChange={HandleSketchChange} />
           </Tabs.Panel>
         </div>
       </div>

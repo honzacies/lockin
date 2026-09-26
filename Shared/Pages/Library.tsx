@@ -96,7 +96,7 @@ function LibraryPageContent() {
               name: doc.name,
               description: doc.description,
               sources,
-              sizeLabel: "20 KB",
+              sizeLabel: FormatBytes(new Blob([JSON.stringify(doc.text.json), JSON.stringify(doc.sketch)]).size),
               createdAt: doc.createdAt,
               updatedAt: doc.updatedAt,
               isFavorite: doc.isFavorite,
@@ -322,6 +322,13 @@ function LibraryPageContent() {
       ) : null}
     </div>
   );
+}
+
+/** Skutečná velikost obsahu dokumentu (text + kresba) — dřív tu byl natvrdo „20 KB". */
+function FormatBytes(bytes: number): string {
+  if (bytes < 1024) return `${bytes} B`;
+  if (bytes < 1024 * 1024) return `${Math.round(bytes / 1024)} KB`;
+  return `${(bytes / 1024 / 1024).toFixed(1)} MB`;
 }
 
 export default function LibraryPage() {

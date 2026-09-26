@@ -235,7 +235,7 @@ export function BlockStyleModal({
           <Checkbox
             isSelected={applyToFuture}
             onChange={ToggleFuture}
-            className="group/checkbox flex cursor-pointer items-center gap-2 text-[13px] text-[#5f5e59]"
+            className="group/checkbox relative flex cursor-pointer flex-row items-center gap-2 text-[13px] text-[#5f5e59]"
           >
             <Checkbox.Content className="contents">
               <Checkbox.Control className="flex size-4 shrink-0 items-center justify-center rounded-md border border-[#d9d9d9] before:bg-[#2c2c2b] group-data-[selected]/checkbox:border-0">

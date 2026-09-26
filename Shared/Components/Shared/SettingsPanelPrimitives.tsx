@@ -28,7 +28,7 @@ export function VisibilityToggleList<S extends object>({
           key={key}
           isSelected={Boolean(style[key])}
           onChange={(checked) => onChange({ [key]: checked } as Partial<S>)}
-          className="group/checkbox flex cursor-pointer items-center gap-2 text-[13px] text-[#2c2c2b]"
+          className="group/checkbox relative flex cursor-pointer flex-row items-center gap-2 text-[13px] text-[#2c2c2b]"
         >
           <Checkbox.Content className="contents">
             <Checkbox.Control className="flex size-3.5 shrink-0 items-center justify-center rounded border border-[#d9d9d9] before:bg-[#2c2c2b] group-data-[selected]/checkbox:border-0">
@@ -71,13 +71,14 @@ export function VariantToggle<V extends string>({
   onChange: (next: V) => void;
 }) {
   return (
-    <div className="grid grid-cols-2 gap-1.5">
+    // Sloupců tolik, kolik je možností (dřív natvrdo 2 — třetí padala na nový řádek).
+    <div className="grid gap-1.5" style={{ gridTemplateColumns: `repeat(${options.length}, minmax(0, 1fr))` }}>
       {options.map((option) => (
         <Button
           key={option}
           variant="ghost"
           onPress={() => onChange(option)}
-          className={`h-auto rounded-lg border px-2.5 py-1.5 text-[13px] font-normal capitalize transition-colors ${
+          className={`h-auto w-full min-w-0 rounded-lg border px-2.5 py-1.5 text-[13px] font-normal capitalize transition-colors ${
             value === option
               ? "border-[#2c2c2b] bg-black/[0.03] text-[#2c2c2b]"
               : "border-[#f0efed] text-[#5f5e59] hover:border-[#c9c8c4]"

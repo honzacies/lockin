@@ -13,6 +13,12 @@ interface IconPickerProps {
   icon?: string | null;
   onChange: (icon: string | undefined) => void;
   size?: number;
+  /** How much of the `size` box the emoji fills. The default 0.5 leaves a
+   * roomy hover target around a big page icon; inline next to text (a to-do
+   * group title) that padding reads as a gap between icon and label, so pass
+   * a higher ratio with a smaller `size` to get a bigger glyph in a tighter
+   * box. */
+  glyphScale?: number;
   /** When true and no icon is set, the "add icon" placeholder stays invisible
    * until this trigger is hovered (or the picker is open) — for compact
    * contexts where an empty-icon hint would otherwise always be visible. */
@@ -22,7 +28,13 @@ interface IconPickerProps {
 /** A transparent, borderless icon trigger — chrome only appears on hover or
  * while the picker is open. The picker offers preset emojis, a custom emoji
  * input, recently-used icons, and image upload (stored as a small data URL). */
-export function IconPicker({ icon, onChange, size = 64, placeholderOnlyOnHover }: IconPickerProps) {
+export function IconPicker({
+  icon,
+  onChange,
+  size = 64,
+  glyphScale = 0.5,
+  placeholderOnlyOnHover,
+}: IconPickerProps) {
   const fileInputRef = useRef<HTMLInputElement>(null);
   const recentIcons = UseUiStore((s) => s.recentIcons);
   const AddRecentIcon = UseUiStore((s) => s.AddRecentIcon);
@@ -50,7 +62,7 @@ export function IconPicker({ icon, onChange, size = 64, placeholderOnlyOnHover }
           aria-label="Set project icon"
           className={`h-auto w-auto flex flex-row items-center justify-center group/picker shrink-0 rounded-2xl p-0 leading-none transition-colors ${open ? "bg-black/[0.04]" : "hover:bg-transparent"
             }`}
-          style={{ width: size, height: size, fontSize: size * 0.5 }}
+          style={{ width: size, height: size, fontSize: size * glyphScale }}
         >
           {icon?.startsWith("data:") ? (
             // eslint-disable-next-line @next/next/no-img-element -- small inline data-URL avatar
@@ -63,7 +75,9 @@ export function IconPicker({ icon, onChange, size = 64, placeholderOnlyOnHover }
             icon
           ) : (
             <ImagePlus
-              size={size * 0.35}
+              // 0.7 of the glyph — the placeholder's old fixed `size * 0.35`
+              // at the default glyphScale, so existing callers look the same.
+              size={size * glyphScale * 0.7}
               strokeWidth={1.5}
               className={`text-[#c9c8c4] ${placeholderOnlyOnHover && !open
                   ? "opacity-0 transition-opacity group-hover/picker:opacity-100"

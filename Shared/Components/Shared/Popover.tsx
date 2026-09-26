@@ -63,6 +63,13 @@ export function Popover({
           if (e.button !== 0) return;
           setOpen((o) => !o);
         }}
+        // Klávesnice: Enter / mezerník na fokusovaném triggeru (tlačítku) otevře i zavře panel.
+        onKeyDownCapture={(e) => {
+          if (e.key !== "Enter" && e.key !== " ") return;
+          if (e.target instanceof HTMLInputElement || e.target instanceof HTMLTextAreaElement) return;
+          e.preventDefault();
+          setOpen((o) => !o);
+        }}
         className="contents cursor-pointer"
       >
         {trigger(open)}
@@ -81,7 +88,7 @@ export function Popover({
           // clicking a date visually did nothing. Same fix already applied
           // to ContextMenu.tsx's panel for the same reason.
           data-marquee-ignore="true"
-          className={`absolute z-30 rounded-xl border border-[#f0efed] bg-white shadow-xl ${
+          className={`absolute z-30 select-none rounded-xl border border-[#f0efed] bg-white shadow-xl ${
             side === "top" ? "bottom-[calc(100%+6px)]" : "top-[calc(100%+6px)]"
           } ${align === "right" ? "right-0" : "left-0"} ${panelClassName ?? ""}`}
         >

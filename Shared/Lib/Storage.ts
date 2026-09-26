@@ -1,5 +1,6 @@
 import type { DocumentRecord, Project } from "@lockin/shared/Types/Project";
 import { GetPlatform } from "@lockin/shared/Platform/Platform";
+import type { DataStorageAdapter } from "@lockin/shared/Platform/Types";
 
 /**
  * Tenká vrstva nad `DataStorageAdapter`. Exportuje přesně ty funkce, které
@@ -36,10 +37,7 @@ export async function DeleteDocument(id: string): Promise<void> {
 }
 
 /** Bootstrap loader — vše, z čeho se při startu hydratuje store. */
-export async function LoadAllProjectsAndDocuments(): Promise<{
-  projects: Project[];
-  documents: DocumentRecord[];
-}> {
+export async function LoadAllProjectsAndDocuments(): ReturnType<DataStorageAdapter["LoadAll"]> {
   return GetPlatform().data.LoadAll();
 }
 

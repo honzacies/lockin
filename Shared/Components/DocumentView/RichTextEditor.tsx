@@ -26,6 +26,10 @@ import {
 import { MarkdownPasteExtension } from "./Editor/Text/MarkdownPasteExtension";
 import { ImagePasteExtension } from "./Editor/Text/ImagePasteExtension";
 import { SpoilerExtension } from "./Editor/Text/SpoilerExtension";
+import { HtmlCommentExtension, WikiLinkExtension } from "./Editor/Text/WikiLinkExtension";
+import { useRouter } from "next/navigation";
+import { UseDataStore } from "@lockin/shared/Store/UseDataStore";
+import { FindWikiDocument, WIKI_SCHEME } from "@lockin/shared/Lib/WikiLink";
 import { BlockSelectionExtension, AttachMarqueeZone } from "./Editor/BlockSelectionExtension";
 import { SelectionToolbar } from "./Editor/SelectionToolbar";
 import { BuildStyleVars } from "./Editor/StyleVars";
@@ -74,6 +78,7 @@ export function RichTextEditor({
   locked = false,
   themeForeground,
 }: RichTextEditorProps) {
+  const router = useRouter();
   const editor = useEditor({
     immediatelyRender: false,
     editable: !locked,
@@ -84,8 +89,15 @@ export function RichTextEditor({
         // as you finish the closing `)` — @tiptap/extension-link ships this
         // itself (both an input rule for typing and a paste rule for
         // pasting markdown-formatted text), just off by default.
-        link: { markdownLinks: true },
+        link: { markdownLinks: true, protocols: [WIKI_SCHEME] },
       }),
+      WikiLinkExtension.configure({
+        onOpen: (target) => {
+          const doc = FindWikiDocument(target, Object.values(UseDataStore.getState().documents));
+          if (doc) router.push(`/Document?id=${encodeURIComponent(doc.id)}`);
+        },
+      }),
+      HtmlCommentExtension,
       VariantBulletList,
       TaskList,
       TaskItem.configure({ nested: true }),

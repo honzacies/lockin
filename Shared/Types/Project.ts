@@ -1,4 +1,5 @@
 import type { JSONContent } from "@tiptap/core";
+import type { CanvasScene } from "@lockin/shared/Store/UseCanvasStore";
 
 export type DocumentMode = "text" | "sketch";
 
@@ -14,7 +15,10 @@ export interface SketchStroke {
 }
 
 export interface SketchContent {
+  /** Kresby ze starého sketch mode — zůstávají jako záloha, zobrazuje se `canvas`. */
   strokes: SketchStroke[];
+  /** Sketch mode jako canvas (karty, spojnice, pero, tužka). */
+  canvas?: CanvasScene;
 }
 
 export interface TextContent {
@@ -73,6 +77,9 @@ export interface DocumentSummary {
   isLocked?: boolean;
   /** Shrinks the editor's default body text size. */
   smallText?: boolean;
+  /** Wiki odkazy mimo text dokumentu — ve vaultu z frontmatteru (`related:`, `up:`).
+   * Počítá se při načtení ze souboru, nikam se neukládá. */
+  extraLinks?: string[];
   /** Reserved for a future actual table of contents — the settings menu
    * toggle exists today, but nothing reads this yet. */
   showTableOfContents?: boolean;

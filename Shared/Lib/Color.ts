@@ -64,3 +64,11 @@ export function ProgressColor(value: number): string {
   if (value <= 74) return "#a9c93a";
   return "#30a46c";
 }
+
+/** Sdílená paleta 16 barev (pořadí podle odstínu) — výběr barev napříč appkou. */
+export const COLOR_SWATCHES = [
+  "#2c2c2b", "#91918e", "#ffffff", "#a18072",
+  "#e5484d", "#d6409f", "#f76b15", "#f5a524",
+  "#ffd60a", "#99d52a", "#30a46c", "#12a594",
+  "#00a2c7", "#0088ff", "#3e63dd", "#8e4ec6",
+];
