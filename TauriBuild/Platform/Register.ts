@@ -1,3 +1,4 @@
+import { invoke } from "@tauri-apps/api/core";
 import { RegisterPlatform } from "@lockin/shared/Platform/Platform";
 import type { KeyValueAdapter } from "@lockin/shared/Platform/Types";
 import { ActiveWorkspace, ListWorkspaces } from "@lockin/shared/Lib/Workspace";
@@ -32,9 +33,26 @@ TauriKeyValue.SetItem("workspaces.json", "state", JSON.stringify({ active: works
   (error: unknown) => console.warn("Workspace mirror failed", error),
 );
 
+/** Úložiště vaultu, jehož každá operace nejdřív počká na povolení složky (fs scope). */
+function WithFolderAccess(path: string) {
+  const allowed = invoke("allow_workspace_folder", { path }).catch((error: unknown) =>
+    console.warn("allow_workspace_folder failed", error),
+  );
+  const storage = CreateVaultStorage(path, kv);
+  return Object.fromEntries(
+    Object.entries(storage).map(([key, fn]) => [
+      key,
+      async (...args: unknown[]) => {
+        await allowed;
+        return (fn as (...a: unknown[]) => unknown)(...args);
+      },
+    ]),
+  ) as unknown as typeof storage;
+}
+
 RegisterPlatform({
   name: "tauri",
-  data: workspace.path ? CreateVaultStorage(workspace.path, kv) : TauriDataStorage,
+  data: workspace.path ? WithFolderAccess(workspace.path) : TauriDataStorage,
   // Úklid médií vidí jen dokumenty aktivního workspacu — ve vaultu by smazal
   // obrázky in-app dokumentů, proto tam neběží.
   media: workspace.path ? { ...TauriMedia, SweepOrphaned: async () => {} } : TauriMedia,

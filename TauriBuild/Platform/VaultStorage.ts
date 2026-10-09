@@ -3,13 +3,16 @@ import type { JSONContent } from "@tiptap/core";
 import type { DocumentRecord, Project } from "@lockin/shared/Types/Project";
 import type { LibraryFolder } from "@lockin/shared/Types/Library";
 import type { DataStorageAdapter, KeyValueAdapter } from "@lockin/shared/Platform/Types";
+import { DISK_CHANGED_EVENT } from "@lockin/shared/Lib/Storage";
 import { UsePriorityStore } from "@lockin/shared/Store/UsePriorityStore";
 import { WikiTargetsInText } from "@lockin/shared/Lib/WikiLink";
 import {
   HasProjectMarker,
+  JoinCanvas,
   MarkdownToDoc,
   PatchMarkdown,
   PROJECT_MARKER,
+  SplitCanvas,
   SplitFrontmatter,
 } from "@lockin/shared/Lib/Markdown";
 
@@ -34,6 +37,8 @@ type Meta = Omit<DocumentRecord, "text">;
 
 /** Meta bez času — podle toho se pozná, jestli se kromě uložení vůbec něco změnilo. */
 const MetaKey = ({ updatedAt: _, ...rest }: Meta) => JSON.stringify(rest);
+/** Do KV jde vše kromě canvasu — ten se ukládá do samotného .md (viz JoinCanvas). */
+const KvMeta = (meta: Meta): Meta => ({ ...meta, sketch: { strokes: meta.sketch?.strokes ?? [] } });
 
 export function CreateVaultStorage(root: string, kv: KeyValueAdapter) {
   const Abs = (rel: string) => `${root}/${rel}`;
@@ -63,7 +68,7 @@ export function CreateVaultStorage(root: string, kv: KeyValueAdapter) {
     if (!(await exists(Abs(rel)))) return null;
     const [raw, info, metaRaw] = await Promise.all([readTextFile(Abs(rel)), stat(Abs(rel)), kv.GetItem(META_STORE, id)]);
     const { frontmatter, body } = SplitFrontmatter(raw);
-    const json = MarkdownToDoc(body);
+    const { doc: json, canvas } = SplitCanvas(MarkdownToDoc(body));
     const dir = rel.includes("/") ? rel.slice(0, rel.lastIndexOf("/")) : null;
     const base: Meta = {
       id,
@@ -78,12 +83,27 @@ export function CreateVaultStorage(root: string, kv: KeyValueAdapter) {
       isFavorite: false,
       sketch: { strokes: [] },
     };
-    const meta: Meta = { ...base, ...(metaRaw ? (JSON.parse(metaRaw) as Partial<Meta>) : {}), id };
+    /**
+     * Casy drzi soubor, ne ulozena metadata. KV je od ikony, oblibenych, tagu
+     * a prejmenovani — kdyz z nej prebije i `updatedAt`, tvari se dokument
+     * porad stejne stary, i kdyz ho na disku nekdo prepsal. Tim se rozbije
+     * vsechno, co se podle toho casu rozhoduje: MCP most pak necte zmeneny
+     * soubor znovu a radi se podle verze, ktera uz na disku neni.
+     */
+    const meta: Meta = {
+      ...base,
+      ...(metaRaw ? (JSON.parse(metaRaw) as Partial<Meta>) : {}),
+      id,
+      createdAt: base.createdAt,
+      updatedAt: base.updatedAt,
+    };
     // Projekt určuje značka v souboru, ne uložená metadata.
     meta.projectId = HasProjectMarker(json) ? PROJECT_PREFIX + id : null;
+    // Canvas ze souboru má přednost; starší canvas z KV se do souboru přesune při dalším uložení.
+    if (canvas) meta.sketch = { strokes: meta.sketch?.strokes ?? [], canvas };
     fileTimes.set(id, { created: base.createdAt, updated: base.updatedAt });
     if (meta.projectId) projectRoots.add(id);
-    onDisk.set(id, { frontmatter, body, meta: MetaKey(meta) });
+    onDisk.set(id, { frontmatter, body, meta: MetaKey(KvMeta(meta)) });
     return { ...meta, text: { json }, extraLinks: WikiTargetsInText(frontmatter) };
   }
 
@@ -97,7 +117,6 @@ export function CreateVaultStorage(root: string, kv: KeyValueAdapter) {
     const base: Project = {
       id,
       name: PathOf(rootId).split("/").pop()!.replace(/\.md$/, ""),
-      tag: "",
       priority: priorities[0]?.id ?? "",
       status: statuses[0]?.id ?? "",
       progress: 0,
@@ -142,7 +161,7 @@ export function CreateVaultStorage(root: string, kv: KeyValueAdapter) {
     async SaveDocument(doc) {
       // extraLinks se počítají ze souboru při načtení — do metadat nepatří.
       const { text, extraLinks: _links, ...meta } = doc;
-      let json: JSONContent = text.json;
+      let json: JSONContent = JoinCanvas(text.json, meta.sketch?.canvas);
       if (projectRoots.has(doc.id) && !HasProjectMarker(json)) {
         json = { ...json, content: [{ type: "hiddenRaw", attrs: { raw: PROJECT_MARKER } }, ...(json.content ?? [])] };
       }
@@ -150,12 +169,16 @@ export function CreateVaultStorage(root: string, kv: KeyValueAdapter) {
       // Dokument, který tahle instance nenačetla (hot reload, nový soubor),
       // si stav z disku přečte teď — jinak by zápis zahodil frontmatter.
       let previous = onDisk.get(doc.id);
-      if (!previous) {
-        const raw = (await exists(Abs(rel))) ? await readTextFile(Abs(rel)) : "";
-        previous = { ...SplitFrontmatter(raw), meta: "" };
+      const current = SplitFrontmatter((await exists(Abs(rel))) ? await readTextFile(Abs(rel)) : "");
+      if (!previous) previous = { ...current, meta: "" };
+      // Soubor mezitím změnil někdo jiný (AI agent, Obsidian…) — náš obsah je
+      // starý, přepsat ho by jeho změnu zahodilo. Aplikace ho místo toho načte znovu.
+      else if (current.body !== previous.body || current.frontmatter !== previous.frontmatter) {
+        window.dispatchEvent(new Event(DISK_CHANGED_EVENT));
+        return;
       }
       const body = PatchMarkdown(previous.body, json);
-      const metaKey = MetaKey(meta);
+      const metaKey = MetaKey(KvMeta(meta));
       // Editor hlásí změnu i při pouhém otevření — bez téhle kontroly by se
       // soubor přepsal (a posunul v Recents), i když uživatel na nic nesáhl.
       if (body === previous.body && metaKey === previous.meta) return;
@@ -170,7 +193,7 @@ export function CreateVaultStorage(root: string, kv: KeyValueAdapter) {
         if (rel.includes("/")) await mkdir(Abs(rel.slice(0, rel.lastIndexOf("/"))), { recursive: true });
         await writeTextFile(Abs(rel), previous.frontmatter + body);
       }
-      await kv.SetItem(META_STORE, doc.id, JSON.stringify(meta));
+      await kv.SetItem(META_STORE, doc.id, JSON.stringify(KvMeta(meta)));
       onDisk.set(doc.id, { frontmatter: previous.frontmatter, body, meta: metaKey });
     },
 
@@ -196,6 +219,23 @@ export function CreateVaultStorage(root: string, kv: KeyValueAdapter) {
 
     // Index je samotná složka, není co přestavovat.
     async RebuildIndex() {},
+
+    async ChangedOnDisk() {
+      const files: string[] = [];
+      await Walk("", files, []);
+      const changed: string[] = [];
+      for (const rel of files) {
+        const id = DOC_PREFIX + rel;
+        const known = onDisk.get(id);
+        if (!known) {
+          changed.push(id); // nový soubor
+          continue;
+        }
+        const { frontmatter, body } = SplitFrontmatter(await readTextFile(Abs(rel)));
+        if (body !== known.body || frontmatter !== known.frontmatter) changed.push(id);
+      }
+      return changed;
+    },
   };
   return storage;
 }

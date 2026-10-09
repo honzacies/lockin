@@ -3,6 +3,7 @@ import type { TodoTask } from "@lockin/shared/Types/QuickNotes";
 import type { FocusColumn, FocusTask } from "@lockin/shared/Store/UseFocusStore";
 import { FindLists, SourceKey } from "@lockin/shared/Lib/CollectTodoSources";
 import { DocToMarkdown } from "@lockin/shared/Lib/Markdown";
+import { DocumentLinkTargets, FindWikiDocument, WikiTarget } from "@lockin/shared/Lib/WikiLink";
 import type { WorkspaceData } from "./Data";
 
 /** Odkaz na úkol v listu — přesně tohle berou zapisovací nástroje. */
@@ -51,6 +52,7 @@ export function AllTasks(data: WorkspaceData): TaskView[] {
   for (const doc of data.documents) {
     const project = ProjectOf(data, doc);
     for (const list of FindLists(doc.id, doc.text?.json)) {
+      if (data.ignoredLists.has(list.id)) continue;
       const base = {
         list: list.title,
         document: doc.name || "Untitled",
@@ -62,6 +64,7 @@ export function AllTasks(data: WorkspaceData): TaskView[] {
     }
   }
   for (const list of data.quickLists) {
+    if (data.ignoredLists.has(list.id)) continue;
     const base = { list: list.title, document: "Quick Notes", deadline: list.deadline };
     for (const task of list.tasks) Push(base, null, list.id, task);
     for (const group of list.groups ?? []) for (const task of group.tasks) Push(base, null, list.id, task, group.title);
@@ -216,31 +219,159 @@ export function Next(data: WorkspaceData, limit = 5) {
     return [{ score, reasons, task: t }];
   });
 
-  // Pestrost: nejvýš 2 tipy ze stejného listu, jinak by jeden dlouhý list zabral celý výběr.
+  // Pestrost: nahoře nejvýš 2 úkoly ze stejného listu (jinak by jeden dlouhý list
+  // zabral celý začátek). Ostatní se nezahodí — jdou za ně, pořád podle skóre.
   const perList = new Map<string, number>();
-  return scored
-    .sort((a, b) => b.score - a.score)
-    .filter(({ task }) => {
-      const n = perList.get(task.ref.listId) ?? 0;
-      perList.set(task.ref.listId, n + 1);
-      return n < 2;
-    })
+  const sorted = scored.sort((a, b) => b.score - a.score);
+  const [front, rest] = [[] as typeof sorted, [] as typeof sorted];
+  for (const item of sorted) {
+    const n = perList.get(item.task.ref.listId) ?? 0;
+    perList.set(item.task.ref.listId, n + 1);
+    (n < 2 ? front : rest).push(item);
+  }
+  return [...front, ...rest]
     .slice(0, limit)
     .map(({ score, reasons, task }, i) => ({ rank: i + 1, score, why: reasons, ...task }));
 }
 
 /** Poznámka jako Markdown (ve vaultu přesně obsah souboru včetně frontmatteru). */
-export function Document(data: WorkspaceData, idOrName: string) {
+export function FindDocument(data: WorkspaceData, idOrName: string) {
   const wanted = idOrName.toLowerCase().replace(/\.md$/, "");
   const doc =
     data.documents.find((d) => d.id.toLowerCase() === idOrName.toLowerCase()) ??
     data.documents.find((d) => d.id.replace(/^md:/, "").replace(/\.md$/, "").toLowerCase() === wanted) ??
     data.documents.find((d) => d.name.toLowerCase() === wanted);
   if (!doc) throw new Error(`Document "${idOrName}" not found.`);
+  return doc;
+}
+
+export function Document(data: WorkspaceData, idOrName: string) {
+  const doc = FindDocument(data, idOrName);
   return {
     id: doc.id,
     name: doc.name,
     project: ProjectOf(data, doc)?.name ?? null,
     markdown: data.rawFiles.get(doc.id) ?? DocToMarkdown(doc.text.json),
   };
+}
+
+/** Projekt podle ID nebo názvu (bez ohledu na velikost písmen). */
+export function FindProject(data: WorkspaceData, idOrName: string): Project {
+  const wanted = idOrName.toLowerCase();
+  const all = Object.values(data.projects);
+  const project =
+    all.find((p) => p.id.toLowerCase() === wanted) ??
+    all.find((p) => p.name.toLowerCase() === wanted) ??
+    // Ve vaultu je ID projektu "project:md:projects/aura.md" — ať jde psát i cestu.
+    all.find((p) => p.rootDocumentId.replace(/^md:/, "").replace(/\.md$/, "").toLowerCase() === wanted);
+  if (!project) throw new Error(`Project "${idOrName}" not found. Available: ${all.map((p) => p.name).join(", ")}`);
+  return project;
+}
+
+/**
+ * Priorita/stav podle ID nebo popisku. Volby jsou uložené jako ID ("high"),
+ * ale člověk i AI je přirozeně píšou popiskem ("High") — bez tohohle překladu
+ * zápis tiše uložil neexistující hodnotu.
+ */
+export function FindOption(data: WorkspaceData, kind: "priority" | "status", idOrLabel: string) {
+  const options = kind === "priority" ? data.priorities : data.statuses;
+  const wanted = idOrLabel.toLowerCase();
+  const option = options.find((o) => o.id.toLowerCase() === wanted) ?? options.find((o) => o.label.toLowerCase() === wanted);
+  if (!option) throw new Error(`Unknown ${kind} "${idOrLabel}". Available: ${options.map((o) => o.label).join(", ")}`);
+  return option;
+}
+
+/** Volby priorit a stavů i s barvami — co smí project priority/status obsahovat. */
+export function Options(data: WorkspaceData) {
+  return { priorities: data.priorities, statuses: data.statuses };
+}
+
+/**
+ * Data grafu poznámek — stejné uzly a hrany, jaké kreslí GraphView, ale jako
+ * JSON. Počítá se z disku, takže na rozdíl od zapisovacích nástrojů funguje
+ * i když LockIn neběží.
+ *
+ * Postavené pro lintování vaultu: `orphans` jsou poznámky, na které nikdo
+ * neodkazuje a samy nikam neodkazují, `brokenLinks` jsou `[[odkazy]]` mířící
+ * na neexistující poznámku.
+ * ponytail: O(n×odkazy) s lineárním hledáním cíle uvnitř — na tisících poznámek
+ * by chtělo cíle předindexovat.
+ */
+export function Graph(data: WorkspaceData, options: { includeEdges?: boolean } = {}) {
+  const docs = data.documents;
+  const TopFolder = (folderId: string | null) => folderId?.replace(/^dir:/, "").split("/")[0] ?? "";
+  const index = new Map(docs.map((doc, i) => [doc.id, i]));
+  const degree = docs.map(() => 0);
+  const edges: { from: string; to: string }[] = [];
+  const brokenLinks: { from: string; target: string }[] = [];
+  const seen = new Set<string>();
+
+  docs.forEach((doc, from) => {
+    for (const target of DocumentLinkTargets(doc)) {
+      const found = FindWikiDocument(target, docs);
+      if (!found) {
+        brokenLinks.push({ from: Path(doc), target: WikiTarget(target) });
+        continue;
+      }
+      const to = index.get(found.id)!;
+      if (to === from) continue;
+      const key = from < to ? `${from}-${to}` : `${to}-${from}`;
+      if (seen.has(key)) continue;
+      seen.add(key);
+      degree[from]++;
+      degree[to]++;
+      if (options.includeEdges !== false) edges.push({ from: Path(doc), to: Path(docs[to]) });
+    }
+  });
+
+  const nodes = docs.map((doc, i) => ({
+    path: Path(doc),
+    label: doc.name || "Untitled",
+    folder: TopFolder(doc.folderId),
+    degree: degree[i],
+    isProject: Boolean(doc.projectId),
+  }));
+
+  return {
+    workspace: data.workspace.name,
+    totals: { notes: nodes.length, links: edges.length, orphans: nodes.filter((n) => !n.degree).length, brokenLinks: brokenLinks.length },
+    folders: [...new Set(nodes.map((n) => n.folder))].filter(Boolean).sort(),
+    orphans: nodes.filter((n) => !n.degree).map((n) => n.path),
+    brokenLinks,
+    nodes,
+    ...(options.includeEdges === false ? {} : { edges }),
+  };
+}
+
+/** Cesta ve vaultu bez `md:` a `.md` — tak se na poznámky odkazuje i v lintu. */
+function Path(doc: DocumentRecord): string {
+  return doc.id.startsWith("md:") ? doc.id.slice(3).replace(/\.md$/, "") : doc.name || doc.id;
+}
+
+
+/**
+ * Nástěnky (canvas) jako data — karty, spojnice a na co odkazují. Jen čtení:
+ * kreslit přes MCP nedává smysl, ale přečíst si, co na nástěnce je, ano.
+ */
+export function Canvases(data: WorkspaceData, name?: string) {
+  const wanted = name?.toLowerCase();
+  const picked = wanted ? data.canvases.filter((c) => c.name.toLowerCase().includes(wanted)) : data.canvases;
+  if (wanted && !picked.length) {
+    throw new Error(`No canvas matches "${name}". Available: ${data.canvases.map((c) => c.name).join(", ") || "none"}`);
+  }
+  return picked.map((canvas) => ({
+    id: canvas.id,
+    name: canvas.name,
+    updatedAt: canvas.updatedAt,
+    totals: { cards: canvas.nodes.length, links: canvas.edges.length, drawings: canvas.strokes?.length ?? 0 },
+    cards: canvas.nodes.map((n) => ({
+      id: n.id,
+      type: n.type,
+      // U karty s dokumentem je `file` jeho ID — ať je vidět, na co ukazuje.
+      ...(n.file ? { document: n.file.startsWith("md:") ? n.file.slice(3).replace(/\.md$/, "") : n.file } : {}),
+      ...(n.text ? { text: n.text } : {}),
+      ...(n.label ? { label: n.label } : {}),
+    })),
+    links: canvas.edges.map((e) => ({ from: e.fromNode, to: e.toNode, ...(e.label ? { label: e.label } : {}) })),
+  }));
 }

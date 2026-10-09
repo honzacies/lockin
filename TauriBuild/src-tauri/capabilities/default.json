@@ -9,6 +9,7 @@
   "permissions": [
     "core:default",
     "store:default",
+    "opener:default",
     "fs:default",
     "fs:allow-appdata-read-recursive",
     "fs:allow-appdata-write-recursive",
@@ -21,10 +22,6 @@
     "fs:allow-remove",
     "fs:allow-stat",
     "fs:allow-write-text-file",
-    {
-      "identifier": "fs:scope",
-      "allow": [{ "path": "D:/Claude Brain" }, { "path": "D:/Claude Brain/**" }]
-    },
     "core:window:allow-close",
     "core:window:allow-minimize",
     "core:window:allow-toggle-maximize",

@@ -1,8 +1,0 @@
-{
-  "mcpServers": {
-    "lockin": {
-      "command": "bun",
-      "args": ["Mcp/index.ts"]
-    }
-  }
-}

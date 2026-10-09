@@ -5,7 +5,8 @@ import type { DocumentRecord, Project } from "@lockin/shared/Types/Project";
 import type { TodoListConfig } from "@lockin/shared/Types/QuickNotes";
 import type { PriorityOption, StatusOption } from "@lockin/shared/Types/PriorityStatus";
 import type { FocusGroup, FocusTask } from "@lockin/shared/Store/UseFocusStore";
-import { HasProjectMarker, MarkdownToDoc, SplitFrontmatter } from "@lockin/shared/Lib/Markdown";
+import type { CanvasFile } from "@lockin/shared/Store/UseCanvasStore";
+import { HasProjectMarker, MarkdownToDoc, SplitCanvas, SplitFrontmatter } from "@lockin/shared/Lib/Markdown";
 
 /**
  * Čte data LockInu přímo z disku, stejně jako je načítá desktopová aplikace
@@ -28,8 +29,12 @@ export interface WorkspaceData {
   board: { tasks: FocusTask[]; groups: FocusGroup[]; runningSince: number | null };
   priorities: PriorityOption[];
   statuses: StatusOption[];
+  /** Listy, které uživatel ignoruje (opakované checklisty) — nepočítají se jako úkoly. */
+  ignoredLists: Set<string>;
   /** Surový obsah .md souboru podle ID dokumentu (jen vault) — pro nástroj document. */
   rawFiles: Map<string, string>;
+  /** Nástěnky (canvas) — karty a spojnice. */
+  canvases: CanvasFile[];
 }
 
 const IDENTIFIER = "app.lockin.desktop";
@@ -128,7 +133,7 @@ function LoadVault(workspace: Workspace, prefix: string, rawFiles: Map<string, s
     const id = `md:${rel}`;
     const raw = readFileSync(join(root, rel), "utf8");
     rawFiles.set(id, raw);
-    const json = MarkdownToDoc(SplitFrontmatter(raw).body);
+    const json = SplitCanvas(MarkdownToDoc(SplitFrontmatter(raw).body)).doc;
     const info = statSync(join(root, rel));
     const dir = rel.includes("/") ? rel.slice(0, rel.lastIndexOf("/")) : null;
     const name = rel.split("/").pop()!.replace(/\.md$/, "");
@@ -154,7 +159,6 @@ function LoadVault(workspace: Workspace, prefix: string, rawFiles: Map<string, s
       projects[projectId] = {
         id: projectId,
         name,
-        tag: "",
         priority: DEFAULT_PRIORITIES[0].id,
         status: DEFAULT_STATUSES[0].id,
         progress: 0,
@@ -188,6 +192,8 @@ export function LoadWorkspace(workspace: Workspace): WorkspaceData {
     ...data,
     quickLists: ReadPersisted<{ lists: TodoListConfig[] }>(`${prefix}todo-lists.json`, "lockin-todo-lists")?.lists ?? [],
     board: { tasks: board?.tasks ?? [], groups: board?.groups ?? [], runningSince: board?.runningSince ?? null },
+    ignoredLists: new Set(ReadPersisted<{ ids: string[] }>(`${prefix}ignored-lists.json`, "lockin-ignored-lists")?.ids ?? []),
+    canvases: ReadPersisted<{ canvases: CanvasFile[] }>(`${prefix}canvases.json`, "lockin-canvases")?.canvases ?? [],
     priorities: options?.priorities?.length ? options.priorities : DEFAULT_PRIORITIES,
     statuses: options?.statuses?.length ? options.statuses : DEFAULT_STATUSES,
     rawFiles,

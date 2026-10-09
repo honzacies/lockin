@@ -1,5 +1,6 @@
 import { availableMonitors, getCurrentWindow, LogicalSize, primaryMonitor, PhysicalPosition } from "@tauri-apps/api/window";
 import { WebviewWindow } from "@tauri-apps/api/webviewWindow";
+import { openUrl } from "@tauri-apps/plugin-opener";
 import type { WindowAdapter } from "@lockin/shared/Platform/Types";
 
 /**
@@ -74,6 +75,9 @@ export const TauriWindow: WindowAdapter = {
     const { width, height } = mini ? SESSION_MINI_SIZE : SESSION_SIZE;
     await getCurrentWindow().setSize(new LogicalSize(width, height));
   },
+
+  // WebView v Tauri neotevře target=_blank — odkaz musí dostat systémový prohlížeč.
+  OpenUrl: (url) => openUrl(url),
 
   async OpenSessionWindow(monitorIndex) {
     const monitors = await availableMonitors();
