@@ -1,3 +1,4 @@
+import type { FieldValue } from "./ProjectFields";
 import type { JSONContent } from "@tiptap/core";
 import type { CanvasScene } from "@lockin/shared/Store/UseCanvasStore";
 
@@ -132,6 +133,12 @@ export interface Project {
   /** Library-only organization — same convention as DocumentSummary. */
   folderId: string | null;
   tagIds: string[];
+  /** Hodnoty vlastních polí podle `FieldDefinition.id` (Types/ProjectFields.ts). */
+  fields?: Record<string, FieldValue>;
+  /** Pole skrytá v tomto projektu (vestavěná i vlastní) — hodnota zůstává uložená. */
+  hiddenFields?: string[];
+  /** Pořadí polí v hlavičce; chybějící pole jdou na konec ve výchozím pořadí. */
+  fieldOrder?: string[];
 }
 
 export interface ManifestEntry {

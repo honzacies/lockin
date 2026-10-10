@@ -6,6 +6,7 @@ import { Sidebar } from "./Sidebar";
 import { Topbar } from "./Topbar";
 import { TodoSettingsPanelSlot } from "./TodoSettingsPanelSlot";
 import { UseUiStore } from "@lockin/shared/Store/UseUiStore";
+import { UseFieldStore } from "@lockin/shared/Store/UseFieldStore";
 import { UsePriorityStore } from "@lockin/shared/Store/UsePriorityStore";
 import { UseTodoStore } from "@lockin/shared/Store/UseTodoStore";
 import { UseDataStore } from "@lockin/shared/Store/UseDataStore";
@@ -125,6 +126,9 @@ export function AppShell({ children, sidebarFooter }: AppShellProps) {
     });
     UsePriorityStore.persist.rehydrate()?.catch((error: unknown) => {
       console.warn("UsePriorityStore: rehydrate failed", error);
+    });
+    UseFieldStore.persist.rehydrate()?.catch((error: unknown) => {
+      console.warn("UseFieldStore: rehydrate failed", error);
     });
     UseTodoStore.persist.rehydrate()?.catch((error: unknown) => {
       console.warn("UseTodoStore: rehydrate failed", error);
