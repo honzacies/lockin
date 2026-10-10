@@ -1,0 +1,87 @@
+# Ignorovat vše v rootu
+*
+
+# Výjimka pro složku Mcp a její obsah
+!/Mcp/
+!/Mcp/**
+
+# Výjimka pro složku TauriBuild a její obsah
+!/TauriBuild/
+!/TauriBuild/**
+
+# Sdílený kód, logo a soubory rootu
+!/Shared/
+!/Shared/**
+!/Brand/
+!/Brand/**
+!/package.json
+!/bun.lock
+!/README.md
+!/LICENSE
+!/NOTICE
+!/.gitignore
+!/.gitattributes
+!/.mcp.json
+
+/TauriBuild/out
+/TauriBuild/node_modules
+/TauriBuild/.claude
+/TauriBuild/.next
+/TauriBuild/src-tauri/gen
+/TauriBuild/src-tauri/target
+
+
+# Závislosti — nikdy nekopírovat mezi OS, vždy nainstalovat na cílovém stroji
+node_modules/
+.pnp
+.pnp.*
+.yarn/*
+!.yarn/patches
+!.yarn/plugins
+!.yarn/releases
+!.yarn/versions
+
+# Next.js build outputy
+.next/
+out/
+build/
+
+# Rust / Tauri build artefakty (můžou být několik GB)
+target/
+src-tauri/gen/schemas/
+
+# TypeScript
+*.tsbuildinfo
+next-env.d.ts
+
+# Env soubory — sem půjdou DB hesla a JWT secrety, nikdy do gitu
+.env
+.env.*
+!.env.example
+
+# Testy
+coverage/
+
+# Různé
+.DS_Store
+*.pem
+Thumbs.db
+
+# Logy
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+.pnpm-debug.log*
+bun-debug.log*
+
+# Editory
+.idea/
+.vscode/*
+!.vscode/extensions.json
+
+# Vercel (nepoužívá se, ale ať se sem omylem nedostane)
+.vercel
+
+# Pracovní podklady pro AI asistenta — settings.local.json je stroj-specifický
+# (obsahuje absolutní cesty), launch.json je naopak sdílená konfigurace projektu.
+**/.claude/settings.local.json

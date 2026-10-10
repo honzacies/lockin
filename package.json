@@ -1,0 +1,26 @@
+{
+  "name": "lockin",
+  "version": "0.1.0",
+  "private": true,
+  "workspaces": [
+    "Shared",
+    "TauriBuild",
+    "Mcp"
+  ],
+  "scripts": {
+    "dev": "cd TauriBuild && bun run dev",
+    "build": "cd TauriBuild && bun run build",
+    "tauri:dev": "cd TauriBuild && bun run tauri:dev",
+    "tauri:build": "cd TauriBuild && bun run tauri:build",
+    "typecheck": "cd Shared && bun run typecheck && cd ../TauriBuild && bun run typecheck && cd ../Mcp && bun run typecheck",
+    "mcp": "cd Mcp && bun index.ts"
+  },
+  "ignoreScripts": [
+    "sharp",
+    "unrs-resolver"
+  ],
+  "trustedDependencies": [
+    "sharp",
+    "unrs-resolver"
+  ]
+}

@@ -51,13 +51,20 @@ offline. You can also point LockIn at an existing folder of Markdown files, such
 - **Per-block styling**: font, size, weight and color for each block type, optionally applied to all
   future documents.
 - **Per-document themes**, small-text mode, lock against edits.
-- **Sketch mode**: a freehand canvas inside any document and in Quick Notes.
+- **Right-click any block** to turn it into another type, format it, restyle that block type,
+  open a component's settings, duplicate or delete it.
+- **Canvas mode in every document** and in Quick Notes: the full canvas (cards, links, shapes, pen,
+  pencil), saved inside the same note — in a folder workspace as one comment line in the same `.md`.
+- **Pick your blocks**: hide whole groups of blocks you never use (say, *Movie & video* if you write
+  code) from the `/` menu.
 - **Quick Notes**: a scratchpad with its own to-do lists, for anything that doesn't belong to a
   project yet.
 
 ### Projects
 - Projects with **status, priority, progress, deadline** and a root document plus sub-documents.
-- Custom status and priority options with your own colors.
+- Custom status and priority options with your own colors and icons.
+- **Icons** for projects, documents, folders and workspaces: emoji, ~1,600 **Lucide** icons, 4,000+
+  **Google Material Symbols**, or your own image.
 
 ### To-dos and focus
 - **To-do Home** collects every to-do list from every note and project, with progress and deadlines.
@@ -72,7 +79,13 @@ offline. You can also point LockIn at an existing folder of Markdown files, such
 - **Library** with folders, colored tags, favorites, recents, filters and a side-panel preview.
 - **Graph view** of how your notes and projects link to each other.
 - **Canvas** boards.
-- Tabs, a customizable sidebar and a custom window chrome.
+- **Search** (`Ctrl+K`) across documents, to-dos and code blocks, with filters, highlighted matches
+  and keyboard navigation.
+- Tabs, a customizable sidebar and a custom window chrome. Right-click empty sidebar space to
+  create anything.
+- **Light and dark mode** (or follow the system), and a full **Settings** window (`Ctrl+,`): start
+  page, editor, blocks, sidebar, focus sessions, priorities and statuses, AI access and
+  **rebindable keyboard shortcuts**.
 
 ### Workspaces
 - **In-app workspace** (default): data is stored as JSON in the app data folder.
@@ -87,7 +100,10 @@ LockIn includes an [MCP](https://modelcontextprotocol.io) server. An AI assistan
 - **pick what to work on next**, with a reason for each pick (board position, deadlines, priority,
   nearly finished lists),
 - tick tasks off, add or rename them, plan them onto the board and start sessions,
-- **write whole documents** that mix any of the editor blocks.
+- **write whole documents** that mix any of the editor blocks, and create projects.
+
+If an agent edits your Markdown files directly, LockIn notices and reloads them instead of
+overwriting the agent's changes. Agent write access can be turned off in Settings → AI & MCP.
 
 See [MCP server](#mcp-server) for setup.
 
@@ -146,6 +162,8 @@ TauriBuild/src-tauri/target/release/bundle/msi/Lockin_0.1.0_x64_en-US.msi
 ```bash
 bun run typecheck                 # TypeScript across all packages
 bun Shared/Lib/Markdown.check.ts  # Markdown <-> editor round-trip
+bun Shared/Lib/Search.check.ts    # search ranking and matching
+bun Shared/Lib/Shortcuts.check.ts # keyboard shortcut parsing
 bun Mcp/Mcp.check.ts              # MCP server end-to-end (reads your real data)
 ```
 
@@ -340,6 +358,7 @@ The note appears in LockIn right away.
 | --- | --- |
 | Overview | `lockin_workspaces`, `lockin_overview`, `lockin_next`, `lockin_graph`, `lockin_canvases`, `lockin_options` |
 | Documents | `lockin_document`, `lockin_write_document`, `lockin_set_document`, `lockin_delete_document` |
+| Create | `lockin_create_project` — the only way to make a project (a folder named "projects" doesn't) |
 | To-do lists | `lockin_tasks`, `lockin_add_task`, `lockin_rename_task`, `lockin_complete_task`, `lockin_move_task`, `lockin_delete_task`, `lockin_add_group`, `lockin_delete_group`, `lockin_set_list`, `lockin_ignore_list` |
 | Board and sessions | `lockin_board`, `lockin_send_to_board`, `lockin_board_move`, `lockin_board_complete`, `lockin_board_remove`, `lockin_board_clear`, `lockin_session` |
 | Projects | `lockin_set_project`, `lockin_set_option`, `lockin_add_option`, `lockin_remove_option` |
