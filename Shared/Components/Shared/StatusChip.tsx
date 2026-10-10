@@ -1,72 +1,33 @@
 "use client";
 
-import { IconGlyph } from "@lockin/shared/Components/Shared/IconGlyph";
-import { Button, Chip } from "@heroui/react";
+import { Button } from "@heroui/react";
 import { UsePriorityStore } from "@lockin/shared/Store/UsePriorityStore";
-import { ContrastTextColor } from "@lockin/shared/Lib/Color";
 import { Popover } from "./Popover";
-import { PriorityStatusPicker } from "./PriorityStatusPicker";
+import { OptionPill, PriorityStatusPicker } from "./PriorityStatusPicker";
 
 interface StatusChipProps {
   /** A StatusOption.id from UsePriorityStore. */
   status: string;
   onChange?: (next: string) => void;
-  size?: "sm" | "md" | "lg";
 }
 
-export function StatusChip({ status, onChange, size = "sm" }: StatusChipProps) {
+export function StatusChip({ status, onChange }: StatusChipProps) {
   const statuses = UsePriorityStore((s) => s.statuses);
-  const AddStatus = UsePriorityStore((s) => s.AddStatus);
-  const UpdateStatus = UsePriorityStore((s) => s.UpdateStatus);
-  const RemoveStatus = UsePriorityStore((s) => s.RemoveStatus);
+  const option = statuses.find((s) => s.id === status) ?? { id: status, label: status || "—", color: "#8b8d98" };
 
-  const option = statuses.find((s) => s.id === status) ?? {
-    id: status,
-    label: status || "—",
-    color: "#8b8d98",
-  };
-
-  const chip = (
-    <Chip
-      size={size}
-      style={
-        {
-          "--chip-bg": option.color,
-          "--chip-fg": ContrastTextColor(option.color),
-        } as React.CSSProperties
-      }
-    >
-      <span className="flex items-center gap-1">
-        {option.icon ? <IconGlyph icon={option.icon} size={12} /> : null}
-        {option.label}
-      </span>
-    </Chip>
-  );
-
-  if (!onChange) return chip;
+  if (!onChange) return <OptionPill option={option} />;
 
   return (
     <Popover
       trigger={() => (
-        <Button variant="ghost" aria-label="Click to change status" className="h-auto cursor-pointer p-0">
-          {chip}
+        <Button variant="ghost" aria-label="Change status" className="h-auto min-w-0 cursor-pointer rounded-xl p-0">
+          <OptionPill option={option} chevron />
         </Button>
       )}
+      panelClassName="w-52 p-1"
     >
       {(close) => (
-        <PriorityStatusPicker
-          title="Available statuses"
-          options={statuses}
-          selectedId={status}
-          size={size}
-          onSelect={(id) => {
-            onChange(id);
-            close();
-          }}
-          onAdd={AddStatus}
-          onUpdate={UpdateStatus}
-          onRemove={RemoveStatus}
-        />
+        <PriorityStatusPicker title="Your statuses" options={statuses} selectedId={status} onSelect={onChange} close={close} />
       )}
     </Popover>
   );

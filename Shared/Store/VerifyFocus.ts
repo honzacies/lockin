@@ -55,7 +55,7 @@ Check(CurrentTask(s())?.id === x.id, "nezařazené úkoly jdou před skupinami")
 s().MoveGroup(g.id, "week");
 Check(s().tasks.find((t) => t.id === y.id)?.column === "week", "skupina se přesune i s úkoly");
 s().RemoveGroup(g.id);
-Check(s().tasks.find((t) => t.id === y.id)?.groupId === undefined, "smazaná skupina úkoly nezahodí");
+Check(!s().tasks.some((t) => t.id === y.id), "smazaná skupina smaže i své úkoly");
 s().ImportTasks([{ title: "I", source: { key: "L2:t", label: "D", href: "/" } }], "backlog", { id: "L2", title: "List" });
 Check(s().groups.some((gr) => gr.title === "List" && gr.sourceListId === "L2"), "import listu založí skupinu");
 UseFocusStore.setState({ tasks: [], groups: [], runningSince: null });
@@ -92,3 +92,9 @@ function ColumnTasksLast() {
   Check(!StartListSession({ ...src, tasks: [src.tasks[1]] }), "list bez otevřených úkolů session nespustí");
   console.log("StartListSession OK");
 }
+
+// Import do prázdné skupiny listu v jiném sloupci ji přesune tam, kam se importuje.
+UseFocusStore.setState({ tasks: [], groups: [{ id: "g1", column: "today", title: "L", sourceListId: "L9" }], runningSince: null });
+s().ImportTasks([{ title: "A", source: { key: "L9:a", label: "D", href: "/" } }], "backlog", { id: "L9", title: "L" });
+Check(s().groups[0].column === "backlog" && s().tasks[0].column === "backlog", "prázdná skupina listu se přesune do cíle importu");
+console.log("Import OK");

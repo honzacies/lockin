@@ -1,7 +1,20 @@
 import { useEffect, useRef } from "react";
 import type { DocumentRecord } from "@lockin/shared/Types/Project";
+import { DocToMarkdown } from "@lockin/shared/Lib/Markdown";
 
 const SAVE_DEBOUNCE_MS = 600;
+
+/** Obsah dokumentu bez času uložení. Text přes Markdown — editor po otevření
+ * doplní výchozí atributy a vyvolá onChange, aniž by se cokoliv změnilo. */
+export function ContentKey({ text, updatedAt: _u, revision: _r, extraLinks: _l, lastMode: _m, ...rest }: DocumentRecord): string {
+  let body: string;
+  try {
+    body = DocToMarkdown(text.json);
+  } catch {
+    body = JSON.stringify(text.json);
+  }
+  return body + JSON.stringify(rest);
+}
 
 interface UseDebouncedDocumentSaveOptions {
   initialDocument: DocumentRecord;
@@ -24,6 +37,24 @@ export function UseDebouncedDocumentSave({
 }: UseDebouncedDocumentSaveOptions) {
   const saveTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const draftRef = useRef<DocumentRecord>(initialDocument);
+  // Podoba naposledy uloženého obsahu podle ID dokumentu — stejný obsah se
+  // neukládá a „Updated" se neposouvá jen kvůli otevření.
+  const savedKeys = useRef(new Map<string, string>());
+
+  const savedModes = useRef(new Map<string, string>());
+
+  function Save() {
+    const draft = draftRef.current;
+    const key = ContentKey(draft);
+    const contentChanged = savedKeys.current.get(draft.id) !== key;
+    // Režim zobrazení (text / canvas) se uloží, ale „Updated" neposune.
+    if (!contentChanged && savedModes.current.get(draft.id) === draft.lastMode) return;
+    savedKeys.current.set(draft.id, key);
+    savedModes.current.set(draft.id, draft.lastMode);
+    const saved: DocumentRecord = contentChanged ? { ...draft, updatedAt: new Date().toISOString() } : draft;
+    draftRef.current = saved;
+    onSave(saved);
+  }
 
   useEffect(() => {
     return () => {
@@ -32,12 +63,16 @@ export function UseDebouncedDocumentSave({
   }, []);
 
   function ScheduleSave(patch: Partial<DocumentRecord>) {
+    // Výchozí bod = dokument, jak byl před první změnou (i po přepnutí na jiný dokument).
+    if (!savedKeys.current.has(draftRef.current.id)) {
+      savedKeys.current.set(draftRef.current.id, ContentKey(draftRef.current));
+      savedModes.current.set(draftRef.current.id, draftRef.current.lastMode);
+    }
     draftRef.current = { ...draftRef.current, ...patch };
     if (saveTimeoutRef.current) clearTimeout(saveTimeoutRef.current);
     saveTimeoutRef.current = setTimeout(() => {
-      const saved: DocumentRecord = { ...draftRef.current, updatedAt: new Date().toISOString() };
-      draftRef.current = saved;
-      onSave(saved);
+      saveTimeoutRef.current = null;
+      Save();
     }, SAVE_DEBOUNCE_MS);
   }
 
@@ -49,9 +84,7 @@ export function UseDebouncedDocumentSave({
     if (!saveTimeoutRef.current) return;
     clearTimeout(saveTimeoutRef.current);
     saveTimeoutRef.current = null;
-    const saved: DocumentRecord = { ...draftRef.current, updatedAt: new Date().toISOString() };
-    draftRef.current = saved;
-    onSave(saved);
+    Save();
   }
 
   return { draftRef, ScheduleSave, FlushNow };

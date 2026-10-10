@@ -1,5 +1,6 @@
 "use client";
 
+import { UseFadeOnChange } from "@lockin/shared/Lib/UseMotion";
 import { useEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import { useRouter } from "next/navigation";
 import { CheckSquare, Code2, FileText, Search, Square } from "lucide-react";
@@ -54,6 +55,7 @@ export default function SearchPage() {
   const [filter, setFilter] = useState<SearchKind | "all">("all");
   const [active, setActive] = useState(0);
   const listRef = useRef<HTMLDivElement>(null);
+  UseFadeOnChange(listRef, [filter]);
 
   useEffect(() => {
     openTab({ id: "search", title: "Search", href: "/Search" });
@@ -91,11 +93,9 @@ export default function SearchPage() {
   }
 
   return (
-    <div className="flex min-h-0 flex-1 flex-col gap-5 px-[50px] pt-8 pb-6">
-      <div className="flex items-center gap-4">
-        <div className="flex size-14 items-center justify-center rounded-2xl bg-black/[0.03]">
-          <Search size={28} strokeWidth={1.5} className="text-[var(--lk-text2)]" />
-        </div>
+    <div className="flex min-h-0 flex-1 flex-col gap-4 px-[50px] pt-6 pb-6">
+      <div className="flex items-center gap-2.5">
+        <Search size={56} strokeWidth={1.5} className="text-black" />
         <p className="text-[40px] font-medium tracking-[-0.8px] text-black">Search</p>
       </div>
 

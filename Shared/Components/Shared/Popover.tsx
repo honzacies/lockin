@@ -1,6 +1,7 @@
 "use client";
 
-import { useEffect, useRef, useState, type ReactNode } from "react";
+import { useEffect, useLayoutEffect, useRef, useState, type ReactNode } from "react";
+import { UsePresence } from "@lockin/shared/Lib/UseMotion";
 
 interface PopoverProps {
   /** Renders the clickable trigger; `open` lets it reflect active state. */
@@ -28,6 +29,52 @@ export function Popover({
 }: PopoverProps) {
   const [open, setOpen] = useState(false);
   const rootRef = useRef<HTMLDivElement>(null);
+  const panelRef = useRef<HTMLDivElement>(null);
+  const { mounted, closing } = UsePresence(open);
+
+  // Panel je `fixed` a vždy celý v okně: vyjede na stranu, kde je víc místa,
+  // vodorovně se přisune dovnitř a když se nevejde na výšku, scrolluje uvnitř.
+  useLayoutEffect(() => {
+    if (!open) return;
+    const MARGIN = 8;
+    const GAP = 6;
+    function Place() {
+      const root = rootRef.current;
+      const panel = panelRef.current;
+      if (!root || !panel) return;
+      const anchor = root.getBoundingClientRect();
+      panel.style.maxHeight = "";
+      const width = panel.offsetWidth;
+      const height = panel.offsetHeight;
+      const below = window.innerHeight - anchor.bottom - GAP - MARGIN;
+      const above = anchor.top - GAP - MARGIN;
+      const preferBelow = side === "bottom";
+      const goBelow = preferBelow ? height <= below || below >= above : !(height <= above || above >= below);
+      const room = Math.max(120, goBelow ? below : above);
+      const shown = Math.min(height, room);
+      const top = goBelow ? anchor.bottom + GAP : anchor.top - GAP - shown;
+      const wanted = align === "right" ? anchor.right - width : anchor.left;
+      const left = Math.min(Math.max(MARGIN, wanted), window.innerWidth - width - MARGIN);
+      panel.style.maxHeight = `${room}px`;
+      panel.style.left = `${left}px`;
+      panel.style.top = `${top}px`;
+      // Předek s transform/filter (např. rozmazané pozadí dialogu) posouvá počátek
+      // pro `fixed` — změřit, kde panel opravdu je, a rozdíl dorovnat.
+      const actual = panel.getBoundingClientRect();
+      if (Math.abs(actual.left - left) > 0.5) panel.style.left = `${2 * left - actual.left}px`;
+      if (Math.abs(actual.top - top) > 0.5) panel.style.top = `${2 * top - actual.top}px`;
+    }
+    Place();
+    const observer = new ResizeObserver(Place);
+    if (panelRef.current) observer.observe(panelRef.current);
+    window.addEventListener("resize", Place);
+    window.addEventListener("scroll", Place, true);
+    return () => {
+      observer.disconnect();
+      window.removeEventListener("resize", Place);
+      window.removeEventListener("scroll", Place, true);
+    };
+  }, [open, side, align]);
 
   useEffect(() => {
     if (!open) return;
@@ -39,10 +86,11 @@ export function Popover({
     function OnKey(e: KeyboardEvent) {
       if (e.key === "Escape") setOpen(false);
     }
-    window.addEventListener("pointerdown", OnPointerDown);
+    // Capture: HeroUI Button zastaví propagaci pointerdownu, klik na jiný trigger by panel nezavřel.
+    window.addEventListener("pointerdown", OnPointerDown, true);
     window.addEventListener("keydown", OnKey);
     return () => {
-      window.removeEventListener("pointerdown", OnPointerDown);
+      window.removeEventListener("pointerdown", OnPointerDown, true);
       window.removeEventListener("keydown", OnKey);
     };
   }, [open]);
@@ -74,8 +122,9 @@ export function Popover({
       >
         {trigger(open)}
       </div>
-      {open ? (
+      {mounted ? (
         <div
+          ref={panelRef}
           onClick={(e) => e.stopPropagation()}
           onPointerDown={(e) => e.stopPropagation()}
           // Panels frequently sit inside a `[data-marquee-zone]` (e.g. the
@@ -88,9 +137,7 @@ export function Popover({
           // clicking a date visually did nothing. Same fix already applied
           // to ContextMenu.tsx's panel for the same reason.
           data-marquee-ignore="true"
-          className={`absolute z-30 select-none rounded-xl border border-[var(--lk-line)] bg-white shadow-xl ${
-            side === "top" ? "bottom-[calc(100%+6px)]" : "top-[calc(100%+6px)]"
-          } ${align === "right" ? "right-0" : "left-0"} ${panelClassName ?? ""}`}
+          className={`fixed z-[250] select-none overflow-y-auto overscroll-contain rounded-xl border border-[var(--lk-line)] bg-white shadow-xl ${closing ? "lockin-fade-out" : "lockin-fade-in"} ${panelClassName ?? ""}`}
         >
           {children(() => setOpen(false))}
         </div>

@@ -526,17 +526,23 @@ export function CanvasView({ embedded, openId }: CanvasViewProps = {}) {
   function Drag(e: ReactPointerEvent, onMove: (dx: number, dy: number, ev: PointerEvent) => void, onEnd?: (ev: PointerEvent) => void) {
     e.stopPropagation();
     const start = { x: e.clientX, y: e.clientY };
+    let last: PointerEvent = e.nativeEvent as PointerEvent;
     function Move(ev: PointerEvent) {
+      last = ev;
       const k = viewRef.current.k;
       onMove((ev.clientX - start.x) / k, (ev.clientY - start.y) / k, ev);
     }
     function Up(ev: PointerEvent) {
       window.removeEventListener("pointermove", Move);
       window.removeEventListener("pointerup", Up);
+      window.removeEventListener("blur", Blur);
       onEnd?.(ev);
     }
+    // Alt+Tab uprostřed tažení: tah skončí tam, kde naposledy byl kurzor.
+    const Blur = () => Up(last);
     window.addEventListener("pointermove", Move);
     window.addEventListener("pointerup", Up);
+    window.addEventListener("blur", Blur);
   }
   function PanDrag(e: ReactPointerEvent) {
     const origin = viewRef.current;

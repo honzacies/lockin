@@ -64,7 +64,7 @@ export interface FocusState {
   ToggleDone: (id: string) => void;
   AddGroup: (column: FocusColumn) => void;
   UpdateGroup: (id: string, patch: Partial<Pick<FocusGroup, "title" | "icon">>) => void;
-  /** Smaže skupinu; její úkoly zůstanou ve sloupci jako nezařazené. */
+  /** Smaže skupinu i s jejími úkoly (úkol se dá předtím vytáhnout ven tažením). */
   RemoveGroup: (id: string) => void;
   /** Přesune skupinu i s úkoly do jiného sloupce. */
   MoveGroup: (id: string, column: FocusColumn) => void;
@@ -159,6 +159,10 @@ export const UseFocusStore = create<FocusState>()(
             if (list && !group && fresh.length) {
               group = { id: crypto.randomUUID(), column, title: list.title, sourceListId: list.id };
               groups = [...groups, group];
+            } else if (group && group.column !== column && !s.tasks.some((t) => t.groupId === group!.id)) {
+              // Prázdná skupina listu z dřívějška (třeba v Today) jde tam, kam se teď importuje.
+              group = { ...group, column };
+              groups = groups.map((g) => (g.id === group!.id ? group! : g));
             }
             const tasks = fresh.map((item) => NewTask(group?.column ?? column, { ...item, groupId: group?.id }));
             return { groups, tasks: [...s.tasks, ...tasks] };
@@ -195,7 +199,7 @@ export const UseFocusStore = create<FocusState>()(
         RemoveGroup: (id) =>
           change((s) => ({
             groups: s.groups.filter((g) => g.id !== id),
-            tasks: s.tasks.map((t) => (t.groupId === id ? { ...t, groupId: undefined } : t)),
+            tasks: s.tasks.filter((t) => t.groupId !== id),
           })),
         MoveGroup: (id, column) =>
           change((s) => {

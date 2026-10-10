@@ -43,8 +43,12 @@ export type McpCommand =
       priority?: string;
       status?: string;
       tagIds?: string[];
+      /** Štítky podle názvu — chybějící aplikace založí. Přičítají se k `tagIds`. */
+      tagNames?: string[];
       deadline?: string | null;
       progress?: number;
+      /** Emoji, `lucide:<name>`, `material:<name>` nebo `data:` URL obrázku. */
+      icon?: string;
     }
   /** Úprava globálních voleb priorit a stavů (popisek, barva) — platí napříč projekty. */
   | { op: "set_option"; kind: "priority" | "status"; optionId: string; label?: string; color?: string }
@@ -68,6 +72,7 @@ export type McpCommand =
       icon?: string;
       folderId?: string | null;
       tagIds?: string[];
+      tagNames?: string[];
       isFavorite?: boolean;
       isLocked?: boolean;
     }
@@ -77,7 +82,11 @@ export type McpCommand =
   /** Ovládání focus session: spustit, pauznout, odbavit aktuální, odložit aktuální. */
   | { op: "session"; action: "start" | "pause" | "complete" | "skip" }
   | { op: "add_option"; kind: "priority" | "status"; label: string; color?: string }
-  | { op: "remove_option"; kind: "priority" | "status"; optionId: string };
+  | { op: "remove_option"; kind: "priority" | "status"; optionId: string }
+  /** Štítek knihovny (sdílený dokumenty i projekty). Stejný název = vrátí existující. */
+  | { op: "create_tag"; name: string; color?: string }
+  /** Smaže štítek a odebere ho ze všech dokumentů a projektů. */
+  | { op: "delete_tag"; tagId: string };
 
 export interface McpRequest {
   id: string;

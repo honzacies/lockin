@@ -8,6 +8,7 @@ import {
   type ReactNode,
 } from "react";
 import { Check, ChevronLeft } from "lucide-react";
+import { UsePresence } from "@lockin/shared/Lib/UseMotion";
 
 interface ContextMenuProps {
   /** The row/element that should react to a right-click. */
@@ -31,6 +32,15 @@ export function ContextMenu({ children, menu, className, onOpen, onClose }: Cont
   const [point, setPoint] = useState<{ x: number; y: number } | null>(null);
   const panelRef = useRef<HTMLDivElement>(null);
   const wasOpen = useRef(false);
+  // Poslední pozice — zavírané menu dobledne na místě, kde bylo.
+  const lastPoint = useRef<{ x: number; y: number } | null>(null);
+  const openedAt = useRef<typeof point>(null);
+  if (point && openedAt.current !== point) {
+    openedAt.current = point;
+    lastPoint.current = point; // useLayoutEffect níž ho případně posune dovnitř okna
+  }
+  const { mounted, closing } = UsePresence(Boolean(point));
+  const shown = point ?? lastPoint.current;
   useEffect(() => {
     if (wasOpen.current && !point) onClose?.();
     wasOpen.current = Boolean(point);
@@ -55,6 +65,7 @@ export function ContextMenu({ children, menu, className, onOpen, onClose }: Cont
     if (clampedX !== point.x || clampedY !== point.y) {
       panelRef.current.style.left = `${clampedX}px`;
       panelRef.current.style.top = `${clampedY}px`;
+      lastPoint.current = { x: clampedX, y: clampedY };
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [point]);
@@ -75,12 +86,13 @@ export function ContextMenu({ children, menu, className, onOpen, onClose }: Cont
       if (!panelRef.current?.contains(e.target as Node)) e.preventDefault();
     }
     const blocking = { passive: false, capture: true } as const;
-    window.addEventListener("pointerdown", OnPointerDown);
+    // Capture: HeroUI Button zastaví propagaci pointerdownu, klik na jiný trigger by panel nezavřel.
+    window.addEventListener("pointerdown", OnPointerDown, true);
     window.addEventListener("keydown", OnKey);
     window.addEventListener("wheel", OnScrollIntent, blocking);
     window.addEventListener("touchmove", OnScrollIntent, blocking);
     return () => {
-      window.removeEventListener("pointerdown", OnPointerDown);
+      window.removeEventListener("pointerdown", OnPointerDown, true);
       window.removeEventListener("keydown", OnKey);
       window.removeEventListener("wheel", OnScrollIntent, blocking);
       window.removeEventListener("touchmove", OnScrollIntent, blocking);
@@ -90,7 +102,7 @@ export function ContextMenu({ children, menu, className, onOpen, onClose }: Cont
   return (
     <div onContextMenu={HandleContextMenu} className={className}>
       {children}
-      {point ? (
+      {mounted && shown ? (
         <div
           ref={panelRef}
           onClick={(e) => e.stopPropagation()}
@@ -104,8 +116,8 @@ export function ContextMenu({ children, menu, className, onOpen, onClose }: Cont
           // the same reason, in case the panel is ever nested somewhere
           // that check doesn't look.
           data-marquee-ignore="true"
-          style={{ position: "fixed", left: point.x, top: point.y }}
-          className="z-50 flex w-52 select-none flex-col gap-px rounded-xl border border-[var(--lk-line)] bg-white p-1 shadow-lg"
+          style={{ position: "fixed", left: shown.x, top: shown.y }}
+          className={`z-50 flex w-52 select-none flex-col gap-px rounded-xl border border-[var(--lk-line)] bg-white p-1 shadow-lg ${closing ? "lockin-fade-out" : "lockin-fade-in"}`}
         >
           {menu(() => setPoint(null))}
         </div>

@@ -6,7 +6,8 @@ export type LibraryFilter =
   | { kind: "tag-all" }
   | { kind: "tag"; id: string }
   | { kind: "project-all" }
-  | { kind: "project"; status: string };
+  /** Projekty podle statusu nebo priority (jedno z nich). */
+  | { kind: "project"; status?: string; priority?: string };
 
 /** Whether two filters represent the "same pill" for toggle-off purposes —
  * a specific folder/tag/status selection still counts as its group being

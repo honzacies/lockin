@@ -35,19 +35,22 @@ export interface WorkspaceData {
   rawFiles: Map<string, string>;
   /** Nástěnky (canvas) — karty a spojnice. */
   canvases: CanvasFile[];
+  /** Štítky knihovny (stejné pro dokumenty i projekty). */
+  tags: { id: string; name: string; color?: string }[];
 }
 
 const IDENTIFIER = "app.lockin.desktop";
 const DEFAULT_WORKSPACE: Workspace = { id: "default", name: "Your Workspace", path: null };
+// Stejné jako Shared/Store/UsePriorityStore.ts (store se sem kvůli závislostem neimportuje).
 const DEFAULT_PRIORITIES: PriorityOption[] = [
-  { id: "low", label: "Low", color: "#8b8d98" },
-  { id: "medium", label: "Medium", color: "#f5a524" },
-  { id: "high", label: "High", color: "#e5484d" },
+  { id: "low", label: "Low", color: "#30a46c", icon: "material:keyboard-arrow-down" },
+  { id: "medium", label: "Medium", color: "#f5a524", icon: "material:horizontal-rule" },
+  { id: "high", label: "High", color: "#e5484d", icon: "material:keyboard-arrow-up" },
 ];
 const DEFAULT_STATUSES: StatusOption[] = [
-  { id: "not-started", label: "Not Started", color: "#8b8d98" },
-  { id: "in-progress", label: "In Progress", color: "#3b7cff" },
-  { id: "done", label: "Done", color: "#30a46c" },
+  { id: "not-started", label: "Not Started", color: "#8b8d98", icon: "material:circle-outline" },
+  { id: "in-progress", label: "In Progress", color: "#3b7cff", icon: "material:progress-activity" },
+  { id: "done", label: "Done", color: "#30a46c", icon: "material:check-circle-outline" },
 ];
 
 /** Tauri appDataDir: Windows %APPDATA%, macOS Application Support, Linux XDG data. */
@@ -194,6 +197,12 @@ export function LoadWorkspace(workspace: Workspace): WorkspaceData {
     board: { tasks: board?.tasks ?? [], groups: board?.groups ?? [], runningSince: board?.runningSince ?? null },
     ignoredLists: new Set(ReadPersisted<{ ids: string[] }>(`${prefix}ignored-lists.json`, "lockin-ignored-lists")?.ids ?? []),
     canvases: ReadPersisted<{ canvases: CanvasFile[] }>(`${prefix}canvases.json`, "lockin-canvases")?.canvases ?? [],
+    tags: Object.values(
+      ReadPersisted<{ tags?: Record<string, { id: string; name: string; color?: string }> }>(
+        `${prefix}library-quicknotes.json`,
+        "lockin-library-quicknotes",
+      )?.tags ?? {},
+    ).map(({ id, name, color }) => ({ id, name, color })),
     priorities: options?.priorities?.length ? options.priorities : DEFAULT_PRIORITIES,
     statuses: options?.statuses?.length ? options.statuses : DEFAULT_STATUSES,
     rawFiles,

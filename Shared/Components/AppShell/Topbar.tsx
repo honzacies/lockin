@@ -11,7 +11,7 @@ interface TopbarProps {
 
 export function Topbar({ onToggleSidebar }: TopbarProps) {
   return (
-    <div className="flex h-[52px] shrink-0 bg-[var(--lk-panel)] items-center border-b z-0 border-[var(--lk-line)]">
+    <div data-topbar className="flex h-[52px] shrink-0 bg-[var(--lk-panel)] items-center border-b z-0 border-[var(--lk-line)]">
       {/* Jen tak široké, jak taby potřebují — zbytek lišty je drag oblast
        * níž. Když se taby nevejdou, smršťují se (TabStrip), pak scrollují. */}
       <div className="flex min-w-0 flex-row gap-2.5 items-center pl-2.5">

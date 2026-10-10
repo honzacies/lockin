@@ -1,6 +1,7 @@
 "use client";
 
-import { createContext, useContext, useState, type ReactNode } from "react";
+import { createContext, Suspense, useContext, useEffect, useRef, useState, type ReactNode, type RefObject } from "react";
+import { usePathname, useSearchParams } from "next/navigation";
 import { UseUiStore } from "@lockin/shared/Store/UseUiStore";
 
 const BlockSettingsPortalContext = createContext<HTMLDivElement | null>(null);
@@ -21,11 +22,19 @@ export function useBlockSettingsPortalNode(): HTMLDivElement | null {
 export function TodoSettingsPanelSlot({ children }: { children: ReactNode }) {
   const isOpen = UseUiStore((state) => state.openBlockSettings !== null);
   const [node, setNode] = useState<HTMLDivElement | null>(null);
+  const contentRef = useRef<HTMLDivElement>(null);
 
   return (
     <BlockSettingsPortalContext.Provider value={node}>
       <div className="flex min-h-0 flex-1">
-        <div className="min-h-0 flex-1 overflow-y-auto">{children}</div>
+        {/* Flex sloupec: stránka s vlastním scrollem (Library, náhled vpravo)
+         * dostane výšku okna a scrolluje sama; ostatní přetečou a scrolluje tenhle obal. */}
+        <div ref={contentRef} className="flex min-h-0 min-w-0 flex-1 flex-col overflow-y-auto">
+          {children}
+        </div>
+        <Suspense fallback={null}>
+          <FadeOnNavigate target={contentRef} />
+        </Suspense>
         {isOpen ? (
           <div
             ref={setNode}
@@ -35,4 +44,20 @@ export function TodoSettingsPanelSlot({ children }: { children: ReactNode }) {
       </div>
     </BlockSettingsPortalContext.Provider>
   );
+}
+
+/** Po přechodu na jinou stránku (i jiný dokument stejné stránky) obsah jemně vybledne dovnitř. */
+function FadeOnNavigate({ target }: { target: RefObject<HTMLDivElement | null> }) {
+  const pathname = usePathname();
+  const search = useSearchParams().toString();
+  const first = useRef(true);
+  useEffect(() => {
+    if (first.current) {
+      first.current = false;
+      return;
+    }
+    if (window.matchMedia("(prefers-reduced-motion: reduce)").matches) return;
+    target.current?.animate([{ opacity: 0 }, { opacity: 1 }], { duration: 200, easing: "ease-out" });
+  }, [pathname, search, target]);
+  return null;
 }

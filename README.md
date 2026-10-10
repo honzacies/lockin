@@ -361,7 +361,8 @@ The note appears in LockIn right away.
 | Create | `lockin_create_project` — the only way to make a project (a folder named "projects" doesn't) |
 | To-do lists | `lockin_tasks`, `lockin_add_task`, `lockin_rename_task`, `lockin_complete_task`, `lockin_move_task`, `lockin_delete_task`, `lockin_add_group`, `lockin_delete_group`, `lockin_set_list`, `lockin_ignore_list` |
 | Board and sessions | `lockin_board`, `lockin_send_to_board`, `lockin_board_move`, `lockin_board_complete`, `lockin_board_remove`, `lockin_board_clear`, `lockin_session` |
-| Projects | `lockin_set_project`, `lockin_set_option`, `lockin_add_option`, `lockin_remove_option` |
+| Projects | `lockin_set_project` (priority, status, progress, deadline, icon, tags), `lockin_set_option`, `lockin_add_option`, `lockin_remove_option` |
+| Tags | `lockin_create_tag`, `lockin_delete_tag` (list them with `lockin_options`) |
 
 `lockin_write_document` accepts the [Markdown format](#markdown-format) above, so an assistant can
 create a note that mixes text, tables, to-do lists, palettes, scenarios, images and videos in a

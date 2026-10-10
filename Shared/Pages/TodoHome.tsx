@@ -1,9 +1,10 @@
 "use client";
 
+import { UseFadeOnChange } from "@lockin/shared/Lib/UseMotion";
 import { IconGlyph } from "@lockin/shared/Components/Shared/IconGlyph";
-import { useEffect, useMemo, useState, type CSSProperties } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import Link from "next/link";
-import { Checkbox, Input } from "@heroui/react";
+import { Input } from "@heroui/react";
 import { ArrowUpRight, Check, CornerDownRight, Eye, EyeOff, FileText, ListTodo, Plus, Search, Zap } from "lucide-react";
 import { UseDataStore } from "@lockin/shared/Store/UseDataStore";
 import { UseTodoStore } from "@lockin/shared/Store/UseTodoStore";
@@ -23,6 +24,7 @@ import { ContextMenuItem, ContextMenuLabel } from "@lockin/shared/Components/Sha
 import { VariantToggle, VisibilityToggleList } from "@lockin/shared/Components/Shared/SettingsPanelPrimitives";
 import type { TodoTask } from "@lockin/shared/Types/QuickNotes";
 import { ActiveWorkspace } from "@lockin/shared/Lib/Workspace";
+import { AppCheckbox } from "@lockin/shared/Components/Shared/AppCheckbox";
 
 type ListData = Pick<FoundList, "id" | "title" | "tasks" | "groups">;
 
@@ -121,6 +123,9 @@ export default function TodoHomePage() {
   const [filter, setFilter] = useState({ hideDone: true, onlyWithOpen: true, showIgnored: false });
   const ignoredIds = UseIgnoredListsStore((s) => s.ids);
   const [sortBy, setSortBy] = useState<SortBy>("open");
+  // Změna filtru nebo řazení přeskládá karty — nová podoba jemně vybledne dovnitř.
+  const gridRef = useRef<HTMLDivElement>(null);
+  UseFadeOnChange(gridRef, [filter, sortBy]);
 
   useEffect(() => {
     openTab({ id: "todo", title: "To-do", href: "/Todo" });
@@ -233,7 +238,7 @@ export default function TodoHomePage() {
         </p>
       ) : (
         // Masonry: karty různé výšky se skládají do sloupců bez děr.
-        <div className="columns-1 gap-4 xl:columns-2 2xl:columns-3">
+        <div ref={gridRef} className="columns-1 gap-4 xl:columns-2 2xl:columns-3">
           {shown.map((card) => (
             <ProjectCard key={card.key} card={card} hideDone={filter.hideDone} query={q} />
           ))}
@@ -359,22 +364,12 @@ function TaskRow({ entry, task }: { entry: ListEntry; task: TodoTask }) {
 
   return (
     <div className="group/task flex items-start gap-2 rounded-lg px-1 py-0.5 hover:bg-black/[0.02]">
-      <Checkbox
-        isSelected={task.done}
+      <AppCheckbox
+        checked={task.done}
         onChange={() => ApplyEdit(entry, { kind: "toggle", taskId: task.id })}
-        className="group/checkbox relative mt-[3px] flex shrink-0 flex-row items-center"
-      >
-        <Checkbox.Content className="contents">
-          <Checkbox.Control
-            className="flex size-4 shrink-0 items-center justify-center rounded-md border border-[var(--lk-gray)] before:bg-[var(--todo-checkbox-color)] group-data-[selected]/checkbox:border-0"
-            style={{ "--todo-checkbox-color": "#0485f7" } as CSSProperties}
-          >
-            <Checkbox.Indicator>
-              <Check size={12} strokeWidth={3} className="text-[#fff]" />
-            </Checkbox.Indicator>
-          </Checkbox.Control>
-        </Checkbox.Content>
-      </Checkbox>
+        ariaLabel={task.done ? "Mark as not done" : "Mark as done"}
+        className="mt-[3px]"
+      />
       <div className={`min-w-0 flex-1 text-[14px] leading-[22px] ${task.done ? "text-[var(--lk-subtle)] line-through" : "text-[var(--lk-ink)]"}`}>
         <InlineEditable
           value={task.title}

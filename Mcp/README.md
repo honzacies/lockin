@@ -201,12 +201,14 @@ Bez `groupId` skončí úkol mezi nezařazenými.
 | Nástroj | Povinné | Volitelné | Co dělá |
 |---|---|---|---|
 | `lockin_write_document` | `markdown` | `document` `name` `mode` | Založí dokument, nebo přepíše/doplní existující |
-| `lockin_set_document` | `document` | `name` `description` `icon` `folderId` `tagIds` `isFavorite` `isLocked` | Metadata dokumentu |
+| `lockin_set_document` | `document` | `name` `description` `icon` `folderId` `tagIds` `tags` `isFavorite` `isLocked` | Metadata dokumentu |
 | `lockin_delete_document` | `document` | — | **Smaže natrvalo.** Ve vaultu smaže `.md` soubor |
-| `lockin_set_project` | `project` | `priority` `status` `tag` `deadline` `progress` | Metadata projektu |
+| `lockin_set_project` | `project` | `priority` `status` `tagIds` `tags` `deadline` `progress` `icon` | Metadata projektu |
 
 `document` i `project` přijímají ID, cestu (`projects/lockin`) i název.
-`mode` je `replace` (výchozí) nebo `append`.
+`mode` je `replace` (výchozí) nebo `append`. `tags` jsou názvy štítků — přidají
+se k existujícím a chybějící se založí. `icon` bere emoji, `lucide:<název>`,
+`material:<název>` nebo `data:` URL obrázku.
 
 **`lockin_delete_document` u projektu smaže i projekt a jeho podřízené dokumenty.**
 Je to nevratné. Dělej to jen když o to uživatel výslovně požádal.
@@ -223,6 +225,15 @@ Platí globálně napříč všemi projekty.
 
 `kind` je `priority` nebo `status`. `option` bere popisek i ID. `color` je hex
 `#e5484d`. Poslední volbu smazat nejde.
+
+### Štítky
+
+Sdílí je dokumenty i projekty. Seznam vrací `lockin_options` (`tags`).
+
+| Nástroj | Povinné | Volitelné | Co dělá |
+|---|---|---|---|
+| `lockin_create_tag` | `name` | `color` | Založí štítek (stejný název vrátí existující) |
+| `lockin_delete_tag` | `tag` | — | Smaže štítek a odebere ho ze všech dokumentů a projektů |
 
 ---
 

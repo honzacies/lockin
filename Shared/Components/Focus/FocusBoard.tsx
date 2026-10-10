@@ -128,19 +128,27 @@ export function FocusDragProvider({ children }: { children: ReactNode }) {
       targetRef.current = TargetAt(e.clientX, e.clientY, draggedId);
       setTarget(targetRef.current);
     }
-    function OnUp() {
+    function End(commit: boolean) {
       window.removeEventListener("pointermove", OnMove);
+      window.removeEventListener("pointerup", OnUp);
+      window.removeEventListener("pointercancel", Cancel);
+      window.removeEventListener("blur", Cancel);
       if (preview) {
         preview.Remove();
         document.body.style.cursor = "";
-        if (targetRef.current) Drop(payload, targetRef.current);
+        if (commit && targetRef.current) Drop(payload, targetRef.current);
       }
       targetRef.current = null;
       setTarget(null);
       setDraggingId(null);
     }
+    const OnUp = () => End(true);
+    // Alt+Tab / ztráta fokusu uprostřed tažení: zahodit, nic nepřesouvat.
+    const Cancel = () => End(false);
     window.addEventListener("pointermove", OnMove);
-    window.addEventListener("pointerup", OnUp, { once: true });
+    window.addEventListener("pointerup", OnUp);
+    window.addEventListener("pointercancel", Cancel);
+    window.addEventListener("blur", Cancel);
   }
 
   return (
@@ -152,7 +160,8 @@ export function FocusDragProvider({ children }: { children: ReactNode }) {
 
 export function FocusBoard({ todayFooter }: { todayFooter?: ReactNode }) {
   return (
-    <div className="flex min-w-0 flex-1 items-start gap-4">
+    // Úzké okno: board scrolluje do strany sám (stránka kolem se do stran nehýbe).
+    <div className="flex min-w-0 flex-1 items-start gap-4 overflow-x-auto pb-1">
       {FOCUS_COLUMNS.map((column) => (
         <Column key={column} column={column}>
           {column === "today" && todayFooter}
@@ -208,7 +217,7 @@ function Column({ column, children }: { column: FocusColumn; children?: ReactNod
     <div
       data-drop-column={column}
       className={`flex min-w-[280px] flex-1 flex-col gap-2 rounded-2xl p-2 ring-1 transition-colors ${
-        column === "today" ? "bg-[#f4f8fe] ring-[#0088ff]/20" : "bg-[var(--lk-panel)] ring-black/[0.04]"
+        column === "today" ? "bg-[#0088ff]/[0.06] ring-[#0088ff]/20" : "bg-[var(--lk-panel)] ring-black/[0.04]"
       } ${isEndTarget ? "ring-2 ring-[#0088ff]/50" : ""}`}
     >
       <div className="flex items-center justify-between gap-2 px-1.5 pt-1">
@@ -275,6 +284,16 @@ function Column({ column, children }: { column: FocusColumn; children?: ReactNod
       {ungrouped.map((task) => (
         <TaskCard key={task.id} task={task} />
       ))}
+      {/* Při tažení úkolu ze skupiny: místo, kam ho pustit, aby ze skupiny vypadl. */}
+      {draggingId && groups.length > 0 ? (
+        <p
+          className={`rounded-lg border border-dashed py-2 text-center text-xs transition-colors ${
+            isEndTarget ? "border-[#0088ff]/50 bg-[#0088ff]/[0.07] text-[#0088ff]" : "border-black/[0.1] text-[var(--lk-subtle)]"
+          }`}
+        >
+          Drop here to take it out of the list
+        </p>
+      ) : null}
       {groups.map((group) => (
         <Group key={group.id} group={group} tasks={own.filter((t) => t.groupId === group.id)} />
       ))}
@@ -341,7 +360,7 @@ function Group({ group, tasks }: { group: FocusGroup; tasks: FocusTask[] }) {
           >
             <ChevronRight size={14} />
           </IconAction>
-          <IconAction label="Remove group" danger onPress={() => RemoveGroup(group.id)}>
+          <IconAction label={`Delete group and its ${tasks.length} tasks`} danger onPress={() => RemoveGroup(group.id)}>
             <X size={14} />
           </IconAction>
         </div>

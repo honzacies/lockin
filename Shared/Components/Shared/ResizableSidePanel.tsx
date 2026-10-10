@@ -35,13 +35,17 @@ export function ResizableSidePanel({ children }: ResizableSidePanelProps) {
       draggingRef.current = false;
       window.removeEventListener("pointermove", OnMove);
       window.removeEventListener("pointerup", OnUp);
+      window.removeEventListener("blur", OnUp);
     }
     window.addEventListener("pointermove", OnMove);
     window.addEventListener("pointerup", OnUp);
+    // Alt+Tab uprostřed tažení: šířka zůstane, kde je, tah skončí.
+    window.addEventListener("blur", OnUp);
   }
 
   return (
-    <div className="relative flex shrink-0" style={{ width }}>
+    // Nikdy širší než půlka okna navíc k minimu — na úzkém okně nesmí vytlačit obsah ven.
+    <div className="relative flex shrink-0" style={{ width: `min(${width}px, max(${MIN_WIDTH}px, 55vw))` }}>
       {/* A hair wider than it looks (px-1.5 straddling the border) so it's
        * actually easy to grab, not just the literal 1px border line. */}
       <div

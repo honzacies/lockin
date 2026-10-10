@@ -88,7 +88,7 @@ function ModeChip({ href, active, icon, children }: { href: string; active: bool
     <Link
       href={href}
       aria-current={active ? "page" : undefined}
-      className={`flex items-center gap-1.5 rounded-[20px] px-2.5 py-[3px] text-sm ${
+      className={`flex items-center gap-1.5 rounded-[20px] px-2.5 py-[3px] text-sm transition-colors duration-200 ${
         active ? "bg-black/[0.03] text-[var(--lk-ink)]" : "text-[var(--lk-muted)] hover:bg-black/[0.03] hover:text-[var(--lk-text2)]"
       }`}
     >
@@ -188,7 +188,7 @@ function NavRow({
     >
       <Link
         href={meta.href}
-        className={`flex w-full items-center gap-[5px] rounded-lg px-[5px] py-[3px] text-left text-[16px] ${active ? "bg-[var(--lk-pill)] text-[var(--lk-fg)]" : "text-[var(--lk-text2)] hover:bg-black/[0.03]"
+        className={`flex w-full items-center gap-[5px] rounded-lg px-[5px] py-[3px] text-left text-[16px] transition-colors duration-200 ${active ? "bg-[var(--lk-pill)] text-[var(--lk-fg)]" : "text-[var(--lk-text2)] hover:bg-black/[0.03]"
           }`}
       >
         <meta.icon size={20} strokeWidth={1.5} />
@@ -256,7 +256,7 @@ function SidebarRow({ item }: { item: SidebarRowData }) {
             e.preventDefault();
             ToggleFolderExpanded(item.id);
           }}
-          className={`flex items-center gap-1.5 truncate rounded-lg px-1.5 py-0.5 text-[16px] ${
+          className={`flex items-center gap-1.5 truncate rounded-lg px-1.5 py-0.5 text-[16px] transition-colors duration-200 ${
             item.active ? "bg-[var(--lk-pill)] text-[var(--lk-fg)]" : "text-[var(--lk-text2)] hover:bg-black/[0.03]"
           }`}
         >
@@ -487,8 +487,6 @@ export function Sidebar({ footer }: { footer?: ReactNode }) {
     .slice(0, 8)
     .map(ToRow);
 
-  const favoriteDocs = Object.values(documents).filter((doc) => doc.isFavorite).map(ToRow);
-
   // Strom: "resources/heroui" je podsložka "resources" (tak chodí složky
   // z vaultu), v řádku se ukáže jen poslední část cesty.
   const folderList = Object.values(folders);
@@ -528,6 +526,17 @@ export function Sidebar({ footer }: { footer?: ReactNode }) {
     color: tag.color ?? DEFAULT_TAG_COLOR,
   }));
 
+  // Oblíbené všeho druhu. Projekt se řídí svou hvězdičkou (řádek je jeho kořenový dokument).
+  const IsProjectRoot = (doc: (typeof documents)[string]) =>
+    Boolean(doc.projectId && projects[doc.projectId]?.rootDocumentId === doc.id);
+  const favoriteItems: SidebarRowData[] = [
+    ...Object.values(documents)
+      .filter((doc) => (IsProjectRoot(doc) ? projects[doc.projectId!].isFavorite : doc.isFavorite))
+      .map(ToRow),
+    ...folderList.filter((folder) => folder.isFavorite).map(ToFolderRow),
+    ...tagItems.filter((item) => tags[item.id]?.isFavorite),
+  ];
+
   // Uložené canvasy — v sidebaru se chovají jako soubory, odkaz nese jejich id.
   const canvasItems: SidebarRowData[] = canvases.map((canvas) => ({
     id: canvas.id,
@@ -539,7 +548,7 @@ export function Sidebar({ footer }: { footer?: ReactNode }) {
 
   const SECTION_ITEMS: Record<SidebarSectionId, SidebarRowData[]> = {
     recents: recentDocs,
-    favorites: favoriteDocs,
+    favorites: favoriteItems,
     folders: folderItems,
     tags: tagItems,
     canvases: canvasItems,
@@ -611,7 +620,7 @@ export function Sidebar({ footer }: { footer?: ReactNode }) {
             isIconOnly
             aria-label={`Settings (${ShortcutFor("settings", shortcuts)})`}
             onPress={() => UseSettingsStore.getState().Open(todoMode ? "session" : "editor")}
-            className="size-7 min-w-0 rounded-md hover:bg-black/[0.04] hover:text-[var(--lk-ink)]"
+            className="size-7 min-w-0 rounded-md text-[var(--lk-muted)] hover:bg-black/[0.04] hover:text-[var(--lk-ink)]"
           >
             <Settings size={18} />
           </Button>
@@ -619,7 +628,7 @@ export function Sidebar({ footer }: { footer?: ReactNode }) {
             href="/Search"
             aria-label={`Search (${ShortcutFor("search", shortcuts)})`}
             title={`Search (${ShortcutFor("search", shortcuts)})`}
-            className={`flex size-7 items-center justify-center rounded-md hover:bg-black/[0.04] ${pathname === "/Search" ? "bg-black/[0.05] text-black" : ""}`}
+            className={`flex size-7 items-center justify-center rounded-md hover:bg-black/[0.04] hover:text-[var(--lk-ink)] ${pathname === "/Search" ? "bg-black/[0.05] text-[var(--lk-ink)]" : "text-[var(--lk-muted)]"}`}
           >
             <Search size={18} />
           </Link>

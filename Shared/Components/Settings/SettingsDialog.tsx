@@ -5,8 +5,6 @@ import {
   Button,
   Checkbox as HCheckbox,
   Kbd,
-  ListBox,
-  Select as HSelect,
   Switch as HSwitch,
   ToggleButton,
   ToggleButtonGroup,
@@ -15,11 +13,13 @@ import {
   ArrowDown,
   ArrowUp,
   Blocks,
+  ChevronDown,
   Bot,
   Check,
   Copy,
   Eye,
   EyeOff,
+  GripVertical,
   Info,
   Keyboard,
   ListX,
@@ -55,9 +55,12 @@ import { UseTodoStore } from "@lockin/shared/Store/UseTodoStore";
 import { ActiveWorkspace } from "@lockin/shared/Lib/Workspace";
 import { FindLists } from "@lockin/shared/Lib/CollectTodoSources";
 import { PlayChime } from "@lockin/shared/Lib/Chime";
+import { UsePresence } from "@lockin/shared/Lib/UseMotion";
 import { ComboFromEvent, SHORTCUTS, ShortcutFor, type ShortcutId } from "@lockin/shared/Lib/Shortcuts";
 import { TagColorPicker } from "@lockin/shared/Components/Shared/TagColorPicker";
 import { IconPicker } from "@lockin/shared/Components/Shared/IconPicker";
+import { Popover } from "@lockin/shared/Components/Shared/Popover";
+import { ContextMenuItem } from "@lockin/shared/Components/Shared/ContextMenu";
 import { LockInLogo } from "@lockin/shared/Components/Shared/LockInLogo";
 import { NAV_META, SECTION_META } from "@lockin/shared/Components/AppShell/Sidebar";
 import { WindowControls } from "@lockin/shared/Components/AppShell/WindowControls";
@@ -161,27 +164,38 @@ function Select<T extends string>({
   label: string;
 }) {
   return (
-    <HSelect
-      aria-label={label}
-      selectedKey={value}
-      onSelectionChange={(key) => key !== null && onChange(String(key) as T)}
-      className="w-[190px] shrink-0"
+    // Stejný výběr jako jinde v appce (štítky, priority, workspace): kompaktní menu s fajfkou.
+    <Popover
+      align="right"
+      panelClassName="w-[200px] p-1"
+      trigger={(open) => (
+        <Button
+          variant="ghost"
+          aria-label={label}
+          className={`h-8 w-[200px] shrink-0 justify-between gap-2 rounded-lg border border-[var(--lk-line2)] px-3 text-[13px] font-medium text-[var(--lk-ink)] hover:bg-black/[0.03] ${open ? "bg-black/[0.03]" : ""}`}
+        >
+          <span className="truncate">{options.find((o) => o.value === value)?.label ?? "—"}</span>
+          <ChevronDown size={14} strokeWidth={1.75} className="shrink-0 text-[var(--lk-muted)]" />
+        </Button>
+      )}
     >
-      <HSelect.Trigger>
-        <HSelect.Value />
-        <HSelect.Indicator />
-      </HSelect.Trigger>
-      <HSelect.Popover>
-        <ListBox>
+      {(close) => (
+        <div className="flex max-h-[300px] flex-col gap-px overflow-y-auto">
           {options.map((option) => (
-            <ListBox.Item key={option.value} id={option.value} textValue={option.label}>
+            <ContextMenuItem
+              key={option.value}
+              selected={option.value === value}
+              onClick={() => {
+                onChange(option.value);
+                close();
+              }}
+            >
               {option.label}
-              <ListBox.ItemIndicator />
-            </ListBox.Item>
+            </ContextMenuItem>
           ))}
-        </ListBox>
-      </HSelect.Popover>
-    </HSelect>
+        </div>
+      )}
+    </Popover>
   );
 }
 
@@ -718,10 +732,63 @@ function OptionsCard({ kind }: { kind: "priority" | "status" }) {
   const Update = kind === "priority" ? store.UpdatePriority : store.UpdateStatus;
   const Remove = kind === "priority" ? store.RemovePriority : store.RemoveStatus;
   const Add = kind === "priority" ? store.AddPriority : store.AddStatus;
+  const Move = kind === "priority" ? store.MovePriority : store.MoveStatus;
+  const rowRefs = useRef(new Map<string, HTMLDivElement>());
+  const [drag, setDrag] = useState<{ id: string; index: number } | null>(null);
+
+  /** Přetažení za úchyt: cílový index podle poloviny řádku pod kurzorem. */
+  function StartDrag(e: React.PointerEvent<HTMLButtonElement>, id: string) {
+    if (e.button !== 0) return;
+    e.preventDefault();
+    const handle = e.currentTarget;
+    handle.setPointerCapture(e.pointerId);
+    let index = options.findIndex((o) => o.id === id);
+    setDrag({ id, index });
+    const OnMove = (ev: PointerEvent) => {
+      const rows = options.map((o) => rowRefs.current.get(o.id)?.getBoundingClientRect());
+      const hit = rows.findIndex((r) => r && ev.clientY < r.top + r.height / 2);
+      index = hit === -1 ? options.length : hit;
+      setDrag({ id, index });
+    };
+    const End = (commit: boolean) => {
+      handle.removeEventListener("pointermove", OnMove);
+      handle.removeEventListener("pointerup", Up);
+      handle.removeEventListener("pointercancel", Cancel);
+      window.removeEventListener("blur", Cancel);
+      const from = options.findIndex((o) => o.id === id);
+      // Index „mezi řádky" → index v poli bez taženého prvku.
+      if (commit) Move(id, index > from ? index - 1 : index);
+      setDrag(null);
+    };
+    const Up = () => End(true);
+    const Cancel = () => End(false);
+    handle.addEventListener("pointermove", OnMove);
+    handle.addEventListener("pointerup", Up);
+    handle.addEventListener("pointercancel", Cancel);
+    window.addEventListener("blur", Cancel);
+  }
+
   return (
     <Card title={kind === "priority" ? "Priorities" : "Statuses"}>
-      {options.map((option) => (
-        <div key={option.id} className="flex items-center gap-3 px-4 py-2">
+      {options.map((option, i) => (
+        <div
+          key={option.id}
+          ref={(el) => {
+            if (el) rowRefs.current.set(option.id, el);
+            else rowRefs.current.delete(option.id);
+          }}
+          className={`group/opt flex items-center gap-3 px-4 py-2 transition-opacity ${drag?.id === option.id ? "opacity-40" : ""} ${
+            drag && drag.index === i ? "shadow-[inset_0_2px_0_0_#0088ff]" : ""
+          } ${drag && drag.index === options.length && i === options.length - 1 ? "shadow-[inset_0_-2px_0_0_#0088ff]" : ""}`}
+        >
+          <button
+            type="button"
+            aria-label={`Drag to reorder ${option.label}`}
+            onPointerDown={(e) => StartDrag(e, option.id)}
+            className="-ml-2 flex h-8 w-4 shrink-0 cursor-grab items-center justify-center text-[var(--lk-faint)] opacity-0 transition-opacity group-hover/opt:opacity-100 active:cursor-grabbing"
+          >
+            <GripVertical size={14} />
+          </button>
           <TagColorPicker color={option.color} onChange={(color) => Update(option.id, { color })} size={20} />
           <IconPicker icon={option.icon} onChange={(icon) => Update(option.id, { icon })} size={26} glyphScale={0.6} />
           <input
@@ -844,6 +911,10 @@ export function SettingsDialog() {
   const Close = UseSettingsStore((s) => s.Close);
   const closeRef = useRef<HTMLButtonElement>(null);
   const panelRef = useRef<HTMLDivElement>(null);
+  // Zavřený dialog ještě dobledne s naposledy otevřenou sekcí.
+  const lastOpen = useRef(open);
+  if (open) lastOpen.current = open;
+  const { mounted, closing } = UsePresence(Boolean(open), 160);
 
   useEffect(() => {
     if (!open) return;
@@ -869,8 +940,8 @@ export function SettingsDialog() {
     };
   }, [open, Close]);
 
-  if (!open) return null;
-  const section = ALL_SECTIONS.find((s) => s.id === open) ?? ALL_SECTIONS[0];
+  if (!mounted) return null;
+  const section = ALL_SECTIONS.find((s) => s.id === (open ?? lastOpen.current)) ?? ALL_SECTIONS[0];
   const View = SECTION_VIEW[section.id];
 
   function NavItem({ meta }: { meta: SectionMeta }) {
@@ -894,7 +965,7 @@ export function SettingsDialog() {
 
   return (
     <div
-      className="lockin-fade-in fixed inset-0 z-[200] flex items-center justify-center bg-[#000]/50 px-6 pt-[60px] pb-6 backdrop-blur-md"
+      className={`${closing ? "lockin-fade-out" : "lockin-fade-in"} fixed inset-0 z-[200] flex items-center justify-center bg-[#000]/50 px-6 pt-[60px] pb-6 backdrop-blur-md`}
       onPointerDown={(e) => {
         if (e.target === e.currentTarget) Close();
       }}

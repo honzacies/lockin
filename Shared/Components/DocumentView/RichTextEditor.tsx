@@ -25,6 +25,7 @@ import {
   TableHeaderExtension,
   TableCellExtension,
 } from "./Editor/Table/TableExtension";
+import { TableControls } from "./Editor/Table/TableControls";
 import { MarkdownPasteExtension } from "./Editor/Text/MarkdownPasteExtension";
 import { ImagePasteExtension } from "./Editor/Text/ImagePasteExtension";
 import { SpoilerExtension } from "./Editor/Text/SpoilerExtension";
@@ -189,7 +190,10 @@ export function RichTextEditor({
       ) : null}
       {editor ? (
         <EditorContextMenu editor={editor}>
-          <EditorContent editor={editor} />
+          <div className="relative flex flex-1 flex-col">
+            <EditorContent editor={editor} />
+            <TableControls editor={editor} />
+          </div>
         </EditorContextMenu>
       ) : (
         <EditorContent editor={editor} />

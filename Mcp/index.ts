@@ -118,7 +118,7 @@ server.registerTool(
   {
     title: "Priorities and statuses",
     description:
-      "The priority and status options a project can use, with their colors. Pass a label (e.g. \"High\") or id to lockin_set_project; change labels/colors with lockin_set_option.",
+      "The priority and status options a project can use, with their colors, plus the library tags. Pass a label (e.g. \"High\") or id to lockin_set_project; change labels/colors with lockin_set_option.",
     inputSchema: workspaceArg,
   },
   Tool(({ workspace }: { workspace?: string }) => Options(Load(workspace))),
@@ -323,15 +323,17 @@ server.registerTool(
   {
     title: "Set project",
     description:
-      "Change a project's priority, status, tags, deadline or progress. Priority and status accept the label (\"High\") or the id — see lockin_options. Only the fields you pass change.",
+      "Change a project's priority, status, tags, deadline, progress or icon. Priority and status accept the label (\"High\") or the id — see lockin_options. Only the fields you pass change.",
     inputSchema: {
       ...workspaceArg,
       project: z.string().describe("Project name or ID (e.g. \"aura\")"),
       priority: z.string().optional().describe("Label or id, e.g. \"High\""),
       status: z.string().optional().describe("Label or id, e.g. \"In Progress\""),
       tagIds: z.array(z.string()).optional().describe("Library tag IDs (same tags as documents) — replaces the current set"),
+      tags: z.array(z.string()).optional().describe("Tag names to add; missing tags are created"),
       deadline: z.string().nullable().optional().describe("\"YYYY-MM-DD\", or null to clear"),
       progress: z.number().int().min(0).max(100).optional(),
+      icon: z.string().optional().describe('Emoji, "lucide:<icon-name>", "material:<icon-name>" or an image data: URL'),
     },
   },
   Tool(async (a: {
@@ -340,8 +342,10 @@ server.registerTool(
     priority?: string;
     status?: string;
     tagIds?: string[];
+    tags?: string[];
     deadline?: string | null;
     progress?: number;
+    icon?: string;
   }) => {
     const workspace = ResolveWorkspace(a.workspace);
     const data = LoadWorkspace(workspace);
@@ -353,8 +357,10 @@ server.registerTool(
       priority: a.priority === undefined ? undefined : FindOption(data, "priority", a.priority).id,
       status: a.status === undefined ? undefined : FindOption(data, "status", a.status).id,
       tagIds: a.tagIds,
+      tagNames: a.tags,
       deadline: a.deadline,
       progress: a.progress,
+      icon: a.icon,
     });
   }),
 );
@@ -509,9 +515,10 @@ server.registerTool(
       document: z.string().describe("Document ID, path or name"),
       name: z.string().min(1).optional(),
       description: z.string().optional(),
-      icon: z.string().optional().describe("Emoji"),
+      icon: z.string().optional().describe('Emoji, "lucide:<icon-name>", "material:<icon-name>" or an image data: URL'),
       folderId: z.string().nullable().optional().describe('Library folder, e.g. "dir:projects"; null for none'),
       tagIds: z.array(z.string()).optional(),
+      tags: z.array(z.string()).optional().describe("Tag names to add; missing tags are created"),
       isFavorite: z.boolean().optional(),
       isLocked: z.boolean().optional().describe("Read-only — the editor stops accepting input"),
     },
@@ -524,13 +531,14 @@ server.registerTool(
     icon?: string;
     folderId?: string | null;
     tagIds?: string[];
+    tags?: string[];
     isFavorite?: boolean;
     isLocked?: boolean;
   }) => {
     const workspace = ResolveWorkspace(a.workspace);
-    const { workspace: _w, document, ...patch } = a;
+    const { workspace: _w, document, tags, ...patch } = a;
     const doc = FindDocument(LoadWorkspace(workspace), document);
-    return Send(workspace, { op: "set_document", docId: doc.id, ...patch });
+    return Send(workspace, { op: "set_document", docId: doc.id, ...patch, tagNames: tags });
   }),
 );
 
@@ -600,6 +608,40 @@ server.registerTool(
     const workspace = ResolveWorkspace(a.workspace);
     const option = FindOption(LoadWorkspace(workspace), a.kind, a.option);
     return Send(workspace, { op: "remove_option", kind: a.kind, optionId: option.id });
+  }),
+);
+
+server.registerTool(
+  "lockin_create_tag",
+  {
+    title: "Create tag",
+    description:
+      "Create a library tag (tags are shared by documents and projects). If a tag with the same name exists, it is returned instead. Assign tags with lockin_set_project / lockin_set_document (`tags` by name also creates missing ones).",
+    inputSchema: {
+      ...workspaceArg,
+      name: z.string().min(1),
+      color: z.string().regex(/^#[0-9a-fA-F]{6}$/).optional().describe("Hex color"),
+    },
+  },
+  Tool(async (a: { workspace?: string; name: string; color?: string }) =>
+    Send(ResolveWorkspace(a.workspace), { op: "create_tag", name: a.name.trim(), color: a.color }),
+  ),
+);
+
+server.registerTool(
+  "lockin_delete_tag",
+  {
+    title: "Delete tag",
+    description: "Delete a library tag and remove it from every document and project. See lockin_options for the existing tags.",
+    inputSchema: { ...workspaceArg, tag: z.string().describe("Tag name or id") },
+  },
+  Tool(async (a: { workspace?: string; tag: string }) => {
+    const workspace = ResolveWorkspace(a.workspace);
+    const { tags } = LoadWorkspace(workspace);
+    const wanted = a.tag.trim().toLowerCase();
+    const tag = tags.find((t) => t.id === a.tag || t.name.toLowerCase() === wanted);
+    if (!tag) throw new Error(`Unknown tag "${a.tag}". Existing: ${tags.map((t) => t.name).join(", ") || "none"}`);
+    return Send(workspace, { op: "delete_tag", tagId: tag.id });
   }),
 );
 

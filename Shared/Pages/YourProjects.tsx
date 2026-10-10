@@ -10,6 +10,7 @@ import { ProjectsTableSkeleton } from "@lockin/shared/Components/YourProjects/Pr
 import { UseDataStore } from "@lockin/shared/Store/UseDataStore";
 import { UseUiStore } from "@lockin/shared/Store/UseUiStore";
 import { CreateNewProject } from "@lockin/shared/Lib/CreateProject";
+import { NEW_BUTTON } from "@lockin/shared/Components/Library/LibraryFilters";
 
 export default function YourProjectsPage() {
   const router = useRouter();
@@ -30,23 +31,16 @@ export default function YourProjectsPage() {
   }
 
   return (
-    <div className="flex flex-col gap-6 px-[50px] pt-8">
-      <div className="flex items-center justify-between">
-        <div className="flex items-center gap-4">
-          <div className="flex size-14 items-center justify-center rounded-2xl bg-black/[0.03]">
-            <Rocket size={28} strokeWidth={1.5} className="text-[var(--lk-text2)]" />
-          </div>
-          <p className="text-[40px] font-medium tracking-[-0.8px] text-black">
-            Your Projects
-          </p>
+    // Stejná hlavička a „New" jako Library.
+    <div className="flex flex-col gap-4 px-[50px] pt-6 pb-6">
+      <div className="flex items-center justify-between gap-2">
+        <div className="flex items-center gap-2.5">
+          <Rocket size={56} strokeWidth={1.5} className="text-black" />
+          <p className="text-[40px] font-medium tracking-[-0.8px] text-black">Your Projects</p>
         </div>
-        <Button
-          variant="ghost"
-          onPress={HandleNewProject}
-          className="h-auto gap-1.5 rounded-lg border border-[var(--lk-line)] bg-[var(--lk-panel)] px-3 py-2 text-sm font-normal text-[var(--lk-text2)] hover:bg-black/[0.03]"
-        >
-          <Plus size={16} strokeWidth={1.5} />
-          New Project
+        <Button variant="ghost" onPress={HandleNewProject} className={NEW_BUTTON}>
+          <Plus size={15} strokeWidth={1.75} />
+          New project
         </Button>
       </div>
       {!hydrated ? (

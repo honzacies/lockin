@@ -19,7 +19,7 @@ export const HEADER_CELLS = [
   { label: "Type", width: "w-[130px]" },
   { label: "Size", width: "w-[100px]" },
   { label: "Created at", width: "w-[110px]" },
-  { label: "Last edited at", width: "flex-1" },
+  { label: "Updated", width: "flex-1" },
 ];
 
 const KIND_ICON = {

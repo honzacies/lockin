@@ -151,3 +151,16 @@ console.log("Markdown ok");
   assert.equal(DocToMarkdown(JoinCanvas(MarkdownToDoc("# Hi"), { nodes: [], edges: [], strokes: [] })), "# Hi\n", "empty canvas isn't written");
   console.log("Canvas embed ok");
 }
+
+// Šířky sloupců tabulky: `|------|` nese šířku, `| --- |` a Prettierovo `| ------ |` ne.
+{
+  const md = "| a | b |\n|------------| --- |\n| 1 | 2 |\n";
+  const doc = MarkdownToDoc(md);
+  const cells = doc.content![0].content![0].content!;
+  assert.deepEqual(cells[0].attrs?.colwidth, [120]);
+  assert.equal(cells[1].attrs?.colwidth, undefined);
+  assert.equal(DocToMarkdown(doc), md);
+  const prettier = MarkdownToDoc("| a | b |\n| ------ | ------ |\n| 1 | 2 |\n");
+  assert.equal(prettier.content![0].content![0].content![0].attrs?.colwidth, undefined);
+  console.log("Table widths ok");
+}

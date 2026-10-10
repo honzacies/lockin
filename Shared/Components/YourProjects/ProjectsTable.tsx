@@ -1,5 +1,6 @@
 "use client";
 
+import { ProjectUpdatedAt } from "@lockin/shared/Lib/CreateProject";
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { Calendar } from "lucide-react";
@@ -24,7 +25,7 @@ export const HEADER_CELLS = [
   { label: "Progress", width: "w-[160px]" },
   { label: "Deadline", width: "w-[150px]" },
   { label: "Tag", width: "w-[130px]" },
-  { label: "Last edited", width: "flex-1" },
+  { label: "Updated", width: "flex-1" },
 ];
 
 interface ProjectsTableProps {
@@ -53,6 +54,7 @@ function ProjectRow({ project }: { project: Project }) {
   const [editing, setEditing] = useState(false);
   const description = UseDataStore((s) => s.documents[project.rootDocumentId]?.description ?? "");
   const allTags = UseDataStore((s) => s.tags);
+  const updatedAt = UseDataStore((s) => ProjectUpdatedAt(project, s.documents));
   const tags = project.tagIds.map((id) => allTags[id]).filter(Boolean);
 
   return (
@@ -92,10 +94,10 @@ function ProjectRow({ project }: { project: Project }) {
           {description || "—"}
         </span>
         <span className="w-[140px] select-none">
-          <StatusChip status={project.status} size="md" />
+          <StatusChip status={project.status} />
         </span>
         <span className="w-[120px] select-none">
-          <PriorityChip priority={project.priority} size="md" />
+          <PriorityChip priority={project.priority} />
         </span>
         <span className="w-[160px] select-none">
           <ProjectProgressBar value={project.progress} />
@@ -127,7 +129,7 @@ function ProjectRow({ project }: { project: Project }) {
           )}
         </div>
         <span className="flex-1 text-xs text-[var(--lk-ink)]/80">
-          {FormatRelativeDate(project.lastEditedAt)}
+          {FormatRelativeDate(updatedAt)}
         </span>
       </div>
     </ContextMenu>

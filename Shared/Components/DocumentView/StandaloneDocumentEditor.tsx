@@ -3,7 +3,6 @@
 import { useEffect, useState } from "react";
 import { Input, Tabs } from "@heroui/react";
 import type { JSONContent } from "@tiptap/react";
-import { Clock } from "lucide-react";
 import type { DocumentMode, DocumentRecord, SketchContent } from "@lockin/shared/Types/Project";
 import { DocumentModeToolbar } from "@lockin/shared/Components/AppShell/DocumentModeToolbar";
 import { RichTextEditor } from "@lockin/shared/Components/DocumentView/RichTextEditor";
@@ -14,7 +13,7 @@ import { DefaultDocumentName } from "@lockin/shared/Lib/CreateDocument";
 import { BlockStyleModal } from "@lockin/shared/Components/DocumentView/StyleEditor/BlockStyleModal";
 import { UseDataStore } from "@lockin/shared/Store/UseDataStore";
 import { UseUiStore } from "@lockin/shared/Store/UseUiStore";
-import { FormatRelativeDate } from "@lockin/shared/Lib/FormatDate";
+import { UpdatedPill } from "@lockin/shared/Components/Shared/MetaPills";
 import { IsDarkBackground } from "@lockin/shared/Lib/ColorAdapt";
 import { UseDebouncedDocumentSave } from "@lockin/shared/Components/DocumentView/UseDebouncedDocumentSave";
 
@@ -147,10 +146,7 @@ export function StandaloneDocumentEditor({
            * same reasoning as DocumentModeToolbar above. */}
           {/* Canvas mód = celá plocha jako stránka Canvas; hlavička jen u textu. */}
           <div className={`flex flex-col gap-4 ${compact ? "px-4 pt-4" : "px-[50px] pt-8"} ${mode === "sketch" ? "hidden" : ""}`}>
-            <span className="flex w-fit items-center gap-1.5 rounded-[60px] bg-[var(--lk-pill)] px-2.5 py-[5px] text-sm text-[var(--lk-text2)]">
-              <Clock size={16} strokeWidth={1.5} />
-              Updated {FormatRelativeDate(document.updatedAt)}
-            </span>
+            <UpdatedPill at={document.updatedAt} />
             {/* textarea, ne input — dlouhý název se zalomí místo useknutí */}
             <textarea
               rows={1}
@@ -164,7 +160,7 @@ export function StandaloneDocumentEditor({
                 }
               }}
               placeholder="Untitled"
-              className="w-full resize-none bg-transparent text-[40px] leading-[1.15] font-medium tracking-[-0.8px] text-black outline-none [field-sizing:content] placeholder:text-[var(--lk-faint)]"
+              className="w-full resize-none overflow-hidden bg-transparent text-[40px] leading-[1.15] font-medium tracking-[-0.8px] text-black outline-none [field-sizing:content] placeholder:text-[var(--lk-faint)]"
             />
             <Input
               value={descriptionDraft}

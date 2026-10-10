@@ -1,7 +1,9 @@
 "use client";
 
+import { ProjectUpdatedAt } from "@lockin/shared/Lib/CreateProject";
+import { UseFadeOnChange } from "@lockin/shared/Lib/UseMotion";
 import { EmptyWorkspace, UseIsWorkspaceEmpty } from "@lockin/shared/Components/AppShell/EmptyWorkspace";
-import { Suspense, useEffect, useMemo, useState } from "react";
+import { Suspense, useEffect, useMemo, useRef, useState } from "react";
 import { useSearchParams } from "next/navigation";
 import { Library } from "lucide-react";
 import { LibraryFilters } from "@lockin/shared/Components/Library/LibraryFilters";
@@ -44,6 +46,8 @@ function LibraryPageContent() {
     return null;
   });
   const [openDocumentId, setOpenDocumentId] = useState<string | null>(null);
+  const tableRef = useRef<HTMLDivElement>(null);
+  UseFadeOnChange(tableRef, [JSON.stringify(filter)]);
   const [openProjectId, setOpenProjectId] = useState<string | null>(null);
   const [projectActiveDocumentId, setProjectActiveDocumentId] = useState<string | null>(null);
   const upsertProject = UseDataStore((state) => state.UpsertProject);
@@ -61,7 +65,8 @@ function LibraryPageContent() {
     const allFolders = Object.values(folders);
     const allTags = Object.values(tags);
 
-    const showDocuments = filter === null || !filter.kind.endsWith("-all");
+    // Filtr projektů ukazuje projekty, ne jejich dokumenty.
+    const showDocuments = filter === null || (!filter.kind.endsWith("-all") && filter.kind !== "project");
     const documentRows: LibraryRow[] = showDocuments
       ? allDocuments
           .filter((doc) => {
@@ -74,9 +79,6 @@ function LibraryPageContent() {
             if (filter.kind === "favorites") return doc.isFavorite;
             if (filter.kind === "folder") return doc.folderId === filter.id;
             if (filter.kind === "tag") return doc.tagIds.includes(filter.id);
-            if (filter.kind === "project") {
-              return doc.projectId ? projects[doc.projectId]?.status === filter.status : false;
-            }
             return true;
           })
           .map((doc) => {
@@ -165,15 +167,19 @@ function LibraryPageContent() {
       filter.kind === "recents" ||
       filter.kind === "favorites" ||
       filter.kind === "project-all" ||
+      filter.kind === "project" ||
       filter.kind === "folder" ||
       filter.kind === "tag";
     const projectRows: LibraryRow[] = showProjects
       ? allProjects
           .filter((project) => {
-            if (filter?.kind === "recents") return IsRecent(project.lastEditedAt);
+            if (filter?.kind === "recents") return IsRecent(ProjectUpdatedAt(project, documents));
             if (filter?.kind === "favorites") return project.isFavorite;
             if (filter?.kind === "folder") return project.folderId === filter.id;
             if (filter?.kind === "tag") return project.tagIds.includes(filter.id);
+            if (filter?.kind === "project") {
+              return filter.status ? project.status === filter.status : project.priority === filter.priority;
+            }
             return true;
           })
           .map((project) => {
@@ -194,7 +200,7 @@ function LibraryPageContent() {
               sources,
               sizeLabel: `${project.documentIds.length + 1} items`,
               createdAt: project.createdAt,
-              updatedAt: project.lastEditedAt,
+              updatedAt: ProjectUpdatedAt(project, documents),
               isFavorite: project.isFavorite,
               icon: project.icon,
             };
@@ -272,7 +278,7 @@ function LibraryPageContent() {
 
   return (
     <div className="flex min-h-0 flex-1">
-      <div className="flex min-h-0 flex-1 flex-col gap-4 overflow-y-auto px-[50px] pt-6 pb-6">
+      <div className="flex min-h-0 min-w-0 flex-1 flex-col gap-4 overflow-y-auto px-[50px] pt-6 pb-6">
         <div className="flex items-center gap-2.5">
           <Library size={56} strokeWidth={1.5} className="text-black" />
           <p className="text-[40px] font-medium tracking-[-0.8px] text-black">
@@ -287,7 +293,9 @@ function LibraryPageContent() {
           onCreateDocument={HandleCreateDocument}
           onCreateProject={HandleCreateProject}
         />
-        {!hydrated ? <LibraryTableSkeleton /> : workspaceEmpty ? <EmptyWorkspace /> : <LibraryTable rows={rows} onOpenRow={HandleOpenRow} />}
+        <div ref={tableRef} className="flex flex-col">
+          {!hydrated ? <LibraryTableSkeleton /> : workspaceEmpty ? <EmptyWorkspace /> : <LibraryTable rows={rows} onOpenRow={HandleOpenRow} />}
+        </div>
       </div>
 
       {openDocument ? (

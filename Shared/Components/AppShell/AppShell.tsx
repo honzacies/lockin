@@ -21,6 +21,7 @@ import { ReleasePointerOnBlur } from "@lockin/shared/Lib/ReleasePointerOnBlur";
 import { MatchShortcut } from "@lockin/shared/Lib/Shortcuts";
 import { CreateNewDocument } from "@lockin/shared/Lib/CreateDocument";
 import { ResolvedTheme, UseSettingsStore } from "@lockin/shared/Store/UseSettingsStore";
+import { GlobalTooltip } from "@lockin/shared/Components/Shared/GlobalTooltip";
 import { SettingsDialog } from "@lockin/shared/Components/Settings/SettingsDialog";
 
 interface AppShellProps {
@@ -105,9 +106,15 @@ export function AppShell({ children, sidebarFooter }: AppShellProps) {
       if (UseDataStore.getState().hydrated) SyncFromDisk().catch((error: unknown) => console.warn("SyncFromDisk failed", error));
     };
     window.addEventListener("focus", Sync);
+    // Pojistka: dokument sám se nikdy neposouvá (UI nesmí ujet z okna) — jen jeho sloupce.
+    const PinDocument = () => {
+      if (window.scrollX || window.scrollY) window.scrollTo(0, 0);
+    };
+    window.addEventListener("scroll", PinDocument);
     window.addEventListener(DISK_CHANGED_EVENT, Sync);
     return () => {
       window.removeEventListener("focus", Sync);
+      window.removeEventListener("scroll", PinDocument);
       window.removeEventListener(DISK_CHANGED_EVENT, Sync);
     };
   }, []);
@@ -197,7 +204,7 @@ export function AppShell({ children, sidebarFooter }: AppShellProps) {
   }, [pathname]);
 
   return (
-    <div className="flex h-screen w-screen overflow-hidden bg-white">
+    <div className="flex h-screen w-screen overflow-clip bg-white">
       {/* Sidebar volá `useSearchParams()` (zvýrazňuje řádek podle URL), což
         * u prerenderu vyžaduje hranici Suspense — bez ní neprojde statický
         * export ani prerender `/_not-found` na serveru. Hranice je jen kolem
@@ -209,11 +216,12 @@ export function AppShell({ children, sidebarFooter }: AppShellProps) {
           <Sidebar footer={sidebarFooter} />
         </Suspense>
       )}
-      <div className="flex min-w-0 flex-1 flex-col">
+      <div className="flex min-h-0 min-w-0 flex-1 flex-col overflow-clip">
         <Topbar onToggleSidebar={toggleSidebar} />
         <TodoSettingsPanelSlot>{children}</TodoSettingsPanelSlot>
       </div>
       <SettingsDialog />
+      <GlobalTooltip />
     </div>
   );
 }

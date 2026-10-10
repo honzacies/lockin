@@ -24,6 +24,25 @@ const APPDATA = { baseDir: BaseDirectory.AppData };
 const POLL_MS = 1000;
 const HEARTBEAT_EVERY = 2; // každý druhý tik
 
+/** ID štítků podle názvu (bez ohledu na velikost písmen); chybějící založí. */
+function TagIdsByName(names: string[]): string[] {
+  return names.map((name) => {
+    const store = UseDataStore.getState();
+    const found = Object.values(store.tags).find((t) => t.name.toLowerCase() === name.trim().toLowerCase());
+    if (found) return found.id;
+    const tag = store.AddTag();
+    store.RenameTag(tag.id, name.trim());
+    return tag.id;
+  });
+}
+
+/** `tagNames` → sjednocené `tagIds` (k zadaným, jinak ke stávajícím). */
+function WithTagNames<T extends { tagIds?: string[]; tagNames?: string[] }>(patch: T, current: string[]) {
+  const { tagNames, ...rest } = patch;
+  if (!tagNames?.length) return rest;
+  return { ...rest, tagIds: [...new Set([...(rest.tagIds ?? current), ...TagIdsByName(tagNames)])] };
+}
+
 /** Provede příkaz z MCP přes stejné akce jako To-do Home. Vrací výsledek nebo hodí chybu. */
 function Run(command: McpCommand): unknown {
   switch (command.op) {
@@ -92,10 +111,13 @@ function Run(command: McpCommand): unknown {
       if (!project) throw new Error("Project not found.");
       const { op, projectId, ...patch } = command;
       // Jen pole, která opravdu přišla — `undefined` by jinak přepsalo hodnotu.
-      const changes = Object.fromEntries(Object.entries(patch).filter(([, v]) => v !== undefined));
-      if (!Object.keys(changes).length) throw new Error("Nothing to change — pass priority, status, tagIds, deadline or progress.");
-      store.UpsertProject({ ...project, ...changes, lastEditedAt: new Date().toISOString() });
-      return store.projects[command.projectId];
+      const changes = Object.fromEntries(
+        Object.entries(WithTagNames(patch, project.tagIds)).filter(([, v]) => v !== undefined),
+      );
+      if (!Object.keys(changes).length)
+        throw new Error("Nothing to change — pass priority, status, tags, deadline, progress or icon.");
+      UseDataStore.getState().UpsertProject({ ...project, ...changes, lastEditedAt: new Date().toISOString() });
+      return UseDataStore.getState().projects[command.projectId];
     }
     case "set_option": {
       const priority = UsePriorityStore.getState();
@@ -183,10 +205,10 @@ function Run(command: McpCommand): unknown {
       const doc = store.documents[command.docId];
       if (!doc) throw new Error("Document not found.");
       const { op, docId, ...rest } = command;
-      const patch = Object.fromEntries(Object.entries(rest).filter(([, v]) => v !== undefined));
+      const patch = Object.fromEntries(Object.entries(WithTagNames(rest, doc.tagIds)).filter(([, v]) => v !== undefined));
       if (!Object.keys(patch).length) throw new Error("Nothing to change.");
-      store.UpsertDocument({ ...doc, ...patch, updatedAt: new Date().toISOString() });
-      return store.documents[command.docId];
+      UseDataStore.getState().UpsertDocument({ ...doc, ...patch, updatedAt: new Date().toISOString() });
+      return UseDataStore.getState().documents[command.docId];
     }
     case "board_remove": {
       if (!UseFocusStore.getState().tasks.some((t) => t.id === command.boardTaskId)) throw new Error("Board task not found.");
@@ -235,6 +257,25 @@ function Run(command: McpCommand): unknown {
       if (command.kind === "priority") priority.RemovePriority(command.optionId);
       else priority.RemoveStatus(command.optionId);
       return { removed: command.optionId, movedTo: fallback };
+    }
+    case "create_tag": {
+      const [id] = TagIdsByName([command.name]);
+      if (command.color) UseDataStore.getState().SetTagColor(id, command.color);
+      return UseDataStore.getState().tags[id];
+    }
+    case "delete_tag": {
+      const store = UseDataStore.getState();
+      const tag = store.tags[command.tagId];
+      if (!tag) throw new Error(`No tag with id "${command.tagId}".`);
+      const Without = (ids: string[]) => ids.filter((id) => id !== command.tagId);
+      for (const project of Object.values(store.projects)) {
+        if (project.tagIds.includes(command.tagId)) store.UpsertProject({ ...project, tagIds: Without(project.tagIds) });
+      }
+      for (const doc of Object.values(store.documents)) {
+        if (doc.tagIds.includes(command.tagId)) store.UpsertDocument({ ...doc, tagIds: Without(doc.tagIds) });
+      }
+      store.RemoveTag(command.tagId);
+      return { removed: tag.name };
     }
     case "board_move": {
       if (!UseFocusStore.getState().tasks.some((t) => t.id === command.boardTaskId)) throw new Error("Board task not found.");

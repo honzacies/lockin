@@ -1,7 +1,8 @@
 "use client";
 
-import { Button, Checkbox } from "@heroui/react";
-import { Check, Trash2 } from "lucide-react";
+import { Button } from "@heroui/react";
+import { Trash2 } from "lucide-react";
+import { AppCheckbox } from "@lockin/shared/Components/Shared/AppCheckbox";
 
 /** Tiny uppercase section label used throughout every block-settings panel
  * (color palette, scenario, to-do list). */
@@ -24,21 +25,14 @@ export function VisibilityToggleList<S extends object>({
   return (
     <div className="flex flex-col gap-1">
       {items.map(({ key, label }) => (
-        <Checkbox
+        <AppCheckbox
           key={key}
-          isSelected={Boolean(style[key])}
+          checked={Boolean(style[key])}
           onChange={(checked) => onChange({ [key]: checked } as Partial<S>)}
-          className="group/checkbox relative flex cursor-pointer flex-row items-center gap-2 text-[13px] text-[var(--lk-ink)]"
-        >
-          <Checkbox.Content className="contents">
-            <Checkbox.Control className="flex size-3.5 shrink-0 items-center justify-center rounded border border-[var(--lk-gray)] before:bg-[var(--lk-ink)] group-data-[selected]/checkbox:border-0">
-              <Checkbox.Indicator>
-                <Check size={10} strokeWidth={3} className="text-[#fff]" />
-              </Checkbox.Indicator>
-            </Checkbox.Control>
-          </Checkbox.Content>
-          {label}
-        </Checkbox>
+          size={14}
+          label={label}
+          className="text-[13px] text-[var(--lk-ink)]"
+        />
       ))}
     </div>
   );

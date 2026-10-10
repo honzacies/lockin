@@ -5,6 +5,8 @@
 // by ho nikdy nespustil (a všechno by pak padalo na „Platforma není
 // zaregistrovaná"). Tenhle import je první, aby platforma stála dřív, než se
 // vyhodnotí moduly storů níž.
+// Testovací náhrada Tauri IPC pro prohlížeč — jen build s NEXT_PUBLIC_LOCKIN_MOCK=1.
+import "@/Platform/DevMock";
 import "@/Platform/Register";
 
 import { useEffect, type ReactNode } from "react";

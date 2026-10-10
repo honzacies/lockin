@@ -1,8 +1,8 @@
 "use client";
 
 import { useEffect, useRef, useState, type CSSProperties } from "react";
-import { Button, Checkbox } from "@heroui/react";
-import { Check, Clock, FolderPlus, GripVertical, ListChecks, Plus, Settings, X } from "lucide-react";
+import { Button } from "@heroui/react";
+import { Clock, FolderPlus, GripVertical, ListChecks, Plus, Settings, X } from "lucide-react";
 import type { TodoListConfig, TodoListStyle, TodoTask } from "@lockin/shared/Types/QuickNotes";
 import { Popover } from "@lockin/shared/Components/Shared/Popover";
 import { DeadlinePickerPanel } from "@lockin/shared/Components/Shared/DeadlinePickerPanel";
@@ -14,6 +14,7 @@ import { ProgressColor } from "@lockin/shared/Lib/Color";
 import { FormatDeadlineLabel } from "@lockin/shared/Lib/FormatDate";
 import { UseUiStore } from "@lockin/shared/Store/UseUiStore";
 import { useBlockSettingsPortalNode } from "@lockin/shared/Components/AppShell/TodoSettingsPanelSlot";
+import { AppCheckbox } from "@lockin/shared/Components/Shared/AppCheckbox";
 
 function TextStyleVars(style: { color?: string; fontFamily?: string; fontSize?: number }): CSSProperties {
   return {
@@ -292,15 +293,20 @@ export function TodoListView({
       setDragOverTarget(TargetAtPoint(moveEvent.clientX, moveEvent.clientY));
     }
 
-    function OnUp(upEvent: PointerEvent) {
-      el.releasePointerCapture(event.pointerId);
+    let finished = false;
+    function End(upEvent: PointerEvent | null) {
+      if (finished) return;
+      finished = true;
+      if (el.hasPointerCapture(event.pointerId)) el.releasePointerCapture(event.pointerId);
       el.removeEventListener("pointermove", OnMove);
       el.removeEventListener("pointerup", OnUp);
+      el.removeEventListener("pointercancel", Cancel);
+      window.removeEventListener("blur", Cancel);
       preview?.Remove();
       el.style.opacity = "";
       // Computed fresh here rather than read from dragOverTarget state,
       // which may not have caught up with this exact release position yet.
-      if (moved) {
+      if (moved && upEvent) {
         const target = TargetAtPoint(upEvent.clientX, upEvent.clientY);
         if (target) onMoveTask(task.id, target.groupId, target.beforeTaskId);
       }
@@ -308,10 +314,15 @@ export function TodoListView({
       setDragOverTarget(null);
       setIsDraggingTask(false);
     }
+    const OnUp = (upEvent: PointerEvent) => End(upEvent);
+    // Alt+Tab / ztráta fokusu uprostřed tažení: zahodit, úkol zůstane, kde byl.
+    const Cancel = () => End(null);
 
     el.setPointerCapture(event.pointerId);
     el.addEventListener("pointermove", OnMove);
     el.addEventListener("pointerup", OnUp);
+    el.addEventListener("pointercancel", Cancel);
+    window.addEventListener("blur", Cancel);
   }
 
   function RenderTask(task: TodoTask, index: number, list: TodoTask[], groupId?: string) {
@@ -344,26 +355,13 @@ export function TodoListView({
           strokeWidth={1.5}
           className="mt-1 shrink-0 cursor-grab text-[var(--lk-gray)] opacity-0 group-hover:opacity-100"
         />
-        <Checkbox
-          isSelected={task.done}
+        <AppCheckbox
+          checked={task.done}
           onChange={() => onToggleTask(task.id, groupId)}
-          className="group/checkbox relative mt-0.5 flex shrink-0 items-center"
-        >
-          <Checkbox.Content className="contents">
-            <Checkbox.Control
-              className="flex size-4 shrink-0 items-center justify-center rounded-md border border-[var(--lk-gray)] before:bg-[var(--todo-checkbox-color)] group-data-[selected]/checkbox:border-0"
-              style={
-                {
-                  "--todo-checkbox-color": style.checkboxColor ?? "#0485f7",
-                } as CSSProperties
-              }
-            >
-              <Checkbox.Indicator>
-                <Check size={12} strokeWidth={3} className="text-[#fff]" />
-              </Checkbox.Indicator>
-            </Checkbox.Control>
-          </Checkbox.Content>
-        </Checkbox>
+          color={style.checkboxColor ?? "#0485f7"}
+          ariaLabel={task.done ? "Mark as not done" : "Mark as done"}
+          className="mt-0.5"
+        />
         <div className="flex flex-1 flex-col text-sm">
           <InlineEditable
             value={task.title}

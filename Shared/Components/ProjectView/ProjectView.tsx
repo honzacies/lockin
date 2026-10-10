@@ -68,6 +68,7 @@ export function ProjectView({
 }: ProjectViewProps) {
   const isWide = UseUiStore((state) => state.isDocumentWide);
   const toggleProjectFavorite = UseDataStore((state) => state.ToggleProjectFavorite);
+  const toggleDocumentFavorite = UseDataStore((state) => state.ToggleDocumentFavorite);
   const styleEditorTarget = UseUiStore((state) => state.styleEditorTarget);
   const CloseStyleEditor = UseUiStore((state) => state.CloseStyleEditor);
   const [mode, setMode] = useState<DocumentMode>(activeDocument.lastMode);
@@ -169,8 +170,10 @@ export function ProjectView({
       <DocumentModeToolbar
         title={activeDocument.id === project.rootDocumentId ? project.name : activeDocument.name}
         icon={<ProjectIcon icon={project.icon} size={20} className="text-[var(--lk-text2)]" />}
-        isFavorite={project.isFavorite}
-        onToggleFavorite={() => toggleProjectFavorite(project.id)}
+        isFavorite={activeDocument.id === project.rootDocumentId ? project.isFavorite : activeDocument.isFavorite}
+        onToggleFavorite={() =>
+          activeDocument.id === project.rootDocumentId ? toggleProjectFavorite(project.id) : toggleDocumentFavorite(activeDocument.id)
+        }
         compact={compact}
         externalHref={compact ? `/YourProjects/Project?id=${project.id}` : undefined}
         onClose={compact ? onClose : undefined}

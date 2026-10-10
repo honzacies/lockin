@@ -39,3 +39,13 @@ export function CreateNewProject(name = "Untitled", folder?: string | null): Pro
 
   return project;
 }
+
+/** Kdy se projekt naposledy změnil: jeho vlastnosti nebo obsah kteréhokoliv jeho dokumentu.
+ * (Samotné otevření nic nemění — viz UseDebouncedDocumentSave.) */
+export function ProjectUpdatedAt(project: Project, documents: Record<string, { updatedAt: string; projectId: string | null }>): string {
+  let latest = project.lastEditedAt;
+  for (const doc of Object.values(documents)) {
+    if (doc.projectId === project.id && doc.updatedAt > latest) latest = doc.updatedAt;
+  }
+  return latest;
+}

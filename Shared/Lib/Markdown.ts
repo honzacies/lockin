@@ -284,9 +284,14 @@ function Block(token: Token): JSONContent[] {
     }
     case "table": {
       const table = token as Tokens.Table;
+      const widths = TableWidths(table.raw);
       const Row = (cells: Tokens.TableCell[], cellType: string): JSONContent => ({
         type: "tableRow",
-        content: cells.map((cell) => ({ type: cellType, content: [Paragraph(Inline(cell.tokens))] })),
+        content: cells.map((cell, i) => ({
+          type: cellType,
+          ...(widths[i] ? { attrs: { colwidth: [widths[i]] } } : {}),
+          content: [Paragraph(Inline(cell.tokens))],
+        })),
       });
       return [
         {
@@ -433,8 +438,8 @@ function BlockMd(node: JSONContent): string {
         .join("\n");
     case "table": {
       const rows = content.map((row) => `| ${(row.content ?? []).map(CellText).join(" | ")} |`);
-      const columns = content[0]?.content?.length ?? 0;
-      rows.splice(1, 0, `|${" --- |".repeat(columns)}`);
+      const widths = (content[0]?.content ?? []).map((cell) => (cell.attrs?.colwidth as number[] | null | undefined)?.[0]);
+      rows.splice(1, 0, `|${widths.map((w) => (w ? `${"-".repeat(Math.max(4, Math.round(w / TABLE_DASH_PX)))}|` : " --- |")).join("")}`);
       return rows.join("\n");
     }
     default: {
@@ -447,6 +452,22 @@ function BlockMd(node: JSONContent): string {
       return `\`\`\`lockin\n${JSON.stringify(node)}\n\`\`\``;
     }
   }
+}
+
+/**
+ * Šířky sloupců tabulky jsou v Markdownu schované v oddělovacím řádku:
+ * `| --- |` = bez šířky, `|------------|` (bez mezer, víc než 3 pomlčky) =
+ * šířka, pomlčka ≈ 10 px. Obsidian i GitHub délku čáry ignorují. Tabulky
+ * zarovnané Prettierem (`| ------ |`, s mezerami) se za šířky nepovažují.
+ */
+const TABLE_DASH_PX = 10;
+function TableWidths(raw: string): (number | null)[] {
+  const line = raw.split("\n")[1] ?? "";
+  return line
+    .trim()
+    .replace(/^\||\|$/g, "")
+    .split("|")
+    .map((cell) => (/^:?-{4,}:?$/.test(cell) ? cell.replace(/[^-]/g, "").length * TABLE_DASH_PX : null));
 }
 
 export function DocToMarkdown(doc: JSONContent): string {

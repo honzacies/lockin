@@ -1,8 +1,8 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { Button, Checkbox } from "@heroui/react";
-import { Check, ChevronDown, Type, X } from "lucide-react";
+import { Button } from "@heroui/react";
+import { ChevronDown, Type, X } from "lucide-react";
 import type { BlockStyle, StyleableBlockType } from "@lockin/shared/Types/Project";
 import { BLOCK_STYLE_FIELDS } from "@lockin/shared/Components/DocumentView/Editor/StyleVars";
 import { UseUiStore } from "@lockin/shared/Store/UseUiStore";
@@ -10,6 +10,7 @@ import { ToolButton, Swatch, Stepper } from "@lockin/shared/Components/Shared/St
 import { Popover } from "@lockin/shared/Components/Shared/Popover";
 import { ColorPicker } from "./ColorPicker";
 import { FontPicker } from "./FontPicker";
+import { AppCheckbox } from "@lockin/shared/Components/Shared/AppCheckbox";
 
 interface BlockStyleModalProps {
   blockType: StyleableBlockType;
@@ -232,20 +233,12 @@ export function BlockStyleModal({
 
         {/* Footer */}
         <div className="flex items-center justify-between border-t border-[var(--lk-line)] px-4 py-3">
-          <Checkbox
-            isSelected={applyToFuture}
+          <AppCheckbox
+            checked={applyToFuture}
             onChange={ToggleFuture}
-            className="group/checkbox relative flex cursor-pointer flex-row items-center gap-2 text-[13px] text-[var(--lk-text2)]"
-          >
-            <Checkbox.Content className="contents">
-              <Checkbox.Control className="flex size-4 shrink-0 items-center justify-center rounded-md border border-[var(--lk-gray)] before:bg-[var(--lk-ink)] group-data-[selected]/checkbox:border-0">
-                <Checkbox.Indicator>
-                  <Check size={12} strokeWidth={3} className="text-[#fff]" />
-                </Checkbox.Indicator>
-              </Checkbox.Control>
-            </Checkbox.Content>
-            Apply to all future documents
-          </Checkbox>
+            label="Apply to all future documents"
+            className="text-[13px] text-[var(--lk-text2)]"
+          />
           <Button
             variant="ghost"
             onPress={onClose}

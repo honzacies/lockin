@@ -7,6 +7,7 @@ import { FileText, Library, ListTodo, Lock, Rocket, Search, Shapes, Waypoints, X
 import { UseUiStore } from "@lockin/shared/Store/UseUiStore";
 import { UseDataStore } from "@lockin/shared/Store/UseDataStore";
 import { ProjectIcon } from "@lockin/shared/Components/Shared/ProjectIcon";
+import { FitTabs } from "@lockin/shared/Lib/FitTabs";
 
 /** Fixed-id pages get their real nav icon instead of the generic FileText —
  * matches Sidebar.tsx's NavLink icons for the same three pages. */
@@ -21,6 +22,19 @@ const SPECIAL_TAB_ICON: Record<string, LucideIcon> = {
 };
 
 const DRAG_THRESHOLD_PX = 4;
+const TAB_MIN = 56;
+const TAB_MAX = 200;
+/** Vše kromě názvu: padding 2×8, ikona 14, mezery 2×6, křížek 16, okraj 1 + rezerva na zaokrouhlení písma. */
+const TAB_CHROME = 66;
+
+let measureCtx: CanvasRenderingContext2D | null = null;
+/** Šířka názvu tabu v pixelech (stejné písmo jako lišta). */
+function TextWidth(text: string, font: string): number {
+  measureCtx ??= document.createElement("canvas").getContext("2d");
+  if (!measureCtx) return text.length * 7;
+  measureCtx.font = font;
+  return measureCtx.measureText(text).width;
+}
 
 export function TabStrip() {
   const router = useRouter();
@@ -40,6 +54,28 @@ export function TabStrip() {
   // instead, the same technique already proven to work for the block-drag
   // marquee in Components/DocumentView/Editor/BlockSelectionExtension.ts.
   const tabRefs = useRef<Map<string, HTMLDivElement>>(new Map());
+  const stripRef = useRef<HTMLDivElement>(null);
+  const [available, setAvailable] = useState(0);
+  const [font, setFont] = useState("");
+  useEffect(() => {
+    const strip = stripRef.current;
+    if (!strip) return;
+    const style = getComputedStyle(strip);
+    setFont(`${style.fontWeight} 14px ${style.fontFamily}`);
+    // Kolik místa taby mají: celá lišta minus vše vlevo od nich, ovládání okna
+    // a drag oblast (min 48 px). Lišta tabů sama je jen tak široká jako taby.
+    const bar = strip.closest<HTMLElement>("[data-topbar]");
+    const Measure = () => {
+      if (!bar) return setAvailable(strip.clientWidth);
+      const left = strip.getBoundingClientRect().left - bar.getBoundingClientRect().left;
+      const controls = (bar.lastElementChild as HTMLElement | null)?.offsetWidth ?? 0;
+      setAvailable(Math.max(0, bar.clientWidth - left - controls - 48));
+    };
+    Measure();
+    const observer = new ResizeObserver(Measure);
+    observer.observe(bar ?? strip);
+    return () => observer.disconnect();
+  }, [openTabs.length > 0]);
   const draggedTabIdRef = useRef<string | null>(null);
   const [dragOverTarget, setDragOverTarget] = useState<{
     beforeTabId: string | null;
@@ -52,6 +88,15 @@ export function TabStrip() {
   }, [activeTabId, openTabs.length]);
 
   if (openTabs.length === 0) return null;
+
+  // Přirozená šířka tabu = jeho název (do TAB_MAX); aktivní tab má vždy celý název.
+  const activeIndex = openTabs.findIndex((t) => t.id === activeTabId);
+  const natural = openTabs.map((tab, i) => {
+    const lock = documents[tab.id]?.isLocked ? 17 : 0;
+    const width = Math.ceil(TextWidth(tab.title || "Untitled", font) + TAB_CHROME + lock);
+    return i === activeIndex ? width : Math.min(TAB_MAX, width);
+  });
+  const widths = available && font ? FitTabs(natural, activeIndex, available, TAB_MIN) : natural;
 
   function HandleSelect(tab: (typeof openTabs)[number]) {
     setActiveTab(tab.id);
@@ -131,30 +176,49 @@ export function TabStrip() {
       setDragOverTarget(TargetAtPoint(moveEvent.clientX));
     }
 
-    function OnUp(upEvent: PointerEvent) {
-      el.releasePointerCapture(event.pointerId);
+    let finished = false;
+    function Cleanup() {
+      if (finished) return;
+      finished = true;
+      if (el.hasPointerCapture(event.pointerId)) el.releasePointerCapture(event.pointerId);
       el.removeEventListener("pointermove", OnMove);
       el.removeEventListener("pointerup", OnUp);
+      el.removeEventListener("pointercancel", Cancel);
+      el.removeEventListener("lostpointercapture", Cancel);
+      window.removeEventListener("blur", Cancel);
       preview?.Remove();
       el.style.opacity = "";
+      draggedTabIdRef.current = null;
+      setDragOverTarget(null);
+    }
+
+    function OnUp(upEvent: PointerEvent) {
+      Cleanup();
       if (!moved) {
         HandleSelect(tab);
       } else {
         const target = TargetAtPoint(upEvent.clientX);
         if (target) moveTab(tab.id, target.beforeTabId);
       }
-      draggedTabIdRef.current = null;
-      setDragOverTarget(null);
+    }
+
+    // Alt+Tab, ztráta fokusu nebo zrušené gesto: tažení se zahodí, tab zůstane, kde byl.
+    function Cancel() {
+      Cleanup();
     }
 
     el.setPointerCapture(event.pointerId);
     el.addEventListener("pointermove", OnMove);
     el.addEventListener("pointerup", OnUp);
+    el.addEventListener("pointercancel", Cancel);
+    el.addEventListener("lostpointercapture", Cancel);
+    window.addEventListener("blur", Cancel);
   }
 
   return (
-    // Taby se nejdřív smršťují (min-w na tabu), teprve pak scrollují — kolečkem myši.
+    // Taby se nejdřív smršťují zleva (FitTabs), teprve pak scrollují — kolečkem myši.
     <div
+      ref={stripRef}
       role="tablist"
       aria-label="Open tabs"
       className="no-scrollbar flex h-[52px] min-w-0 items-center gap-0 overflow-x-auto"
@@ -181,6 +245,7 @@ export function TabStrip() {
           }}
           role="tab"
           aria-selected={tab.id === activeTabId}
+          style={{ width: widths[index] }}
           tabIndex={0}
           onPointerDown={(e) => HandlePointerDown(e, tab)}
           onKeyDown={(e) => {
@@ -194,7 +259,7 @@ export function TabStrip() {
           // first one) — giving every tab its own full border-x would stack
           // two 1px lines on top of each other at every shared edge between
           // adjacent tabs, since they sit flush with no gap.
-          className={`group flex min-w-[88px] max-w-[200px] shrink cursor-pointer items-center gap-1.5 h-[53px] mt-[2px] z-2 border-1 border-y-0 border-r-[var(--lk-line)] ${
+          className={`group flex shrink-0 cursor-pointer items-center gap-1.5 h-[53px] mt-[2px] z-2 border-1 border-y-0 border-r-[var(--lk-line)] ${
             index === 0 ? "border-l-[var(--lk-line)]" : "border-l-0"
           } px-2 py-1.5 text-sm ${
             tab.id === activeTabId
@@ -204,7 +269,7 @@ export function TabStrip() {
             showRightLine ? "shadow-[inset_-2px_0_0_0_#0088ff]" : ""
           }`}
         >
-          <span className="flex min-w-0 shrink items-center gap-1.5">
+          <span className="flex min-w-0 flex-1 items-center gap-1.5">
             {(() => {
               if (tab.isProject) {
                 return <ProjectIcon icon={tab.icon} size={14} className="shrink-0" />;
@@ -227,7 +292,7 @@ export function TabStrip() {
             aria-label={`Close ${tab.title || "Untitled"}`}
             onClick={(e) => e.stopPropagation()}
             onPress={() => HandleClose(tab)}
-            className="flex h-4 w-4 shrink-0 rounded p-0.5 text-[var(--lk-text2)] hover:bg-[var(--lk-gray)]"
+            className="flex h-4 w-4 min-w-0 shrink-0 rounded p-0.5 text-[var(--lk-text2)] hover:bg-[var(--lk-gray)]"
           >
             <X size={13} strokeWidth={1.5} />
           </Button>

@@ -84,7 +84,7 @@ function ProjectPageContent() {
             removeProject(project.id);
             router.push("/YourProjects");
           }}
-          className="h-auto rounded-lg border border-[#f0d4d4] bg-[#fdf4f4] px-3 py-1.5 text-sm font-medium text-[#e5484d] hover:bg-[#fbe9e9]"
+          className="h-auto rounded-lg border border-[#e5484d]/25 bg-[#e5484d]/[0.06] px-3 py-1.5 text-sm font-medium text-[#e5484d] hover:bg-[#e5484d]/[0.12]"
         >
           Delete this broken project
         </Button>

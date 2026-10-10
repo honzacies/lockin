@@ -283,7 +283,7 @@ export function FindOption(data: WorkspaceData, kind: "priority" | "status", idO
 
 /** Volby priorit a stavů i s barvami — co smí project priority/status obsahovat. */
 export function Options(data: WorkspaceData) {
-  return { priorities: data.priorities, statuses: data.statuses };
+  return { priorities: data.priorities, statuses: data.statuses, tags: data.tags };
 }
 
 /**
