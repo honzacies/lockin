@@ -2,7 +2,7 @@
 
 import { useEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import { Button } from "@heroui/react";
-import { ImagePlus, Search, Upload } from "lucide-react";
+import { ImagePlus, Search, Upload } from "@lockin/shared/Components/Shared/UiIcons";
 import { iconNames as LUCIDE_NAMES } from "lucide-react/dynamic";
 import { UseUiStore } from "@lockin/shared/Store/UseUiStore";
 import { FileToIconDataUrl } from "@lockin/shared/Lib/Icon";

@@ -1,7 +1,7 @@
 "use client";
 
 import { useRouter } from "next/navigation";
-import { FileText, Folder, Hash, Rocket, Shapes, type LucideIcon } from "lucide-react";
+import { FileText, Folder, Hash, Rocket, Shapes, type LucideIcon } from "@lockin/shared/Components/Shared/UiIcons";
 import { ContextMenuItem, ContextMenuLabel } from "@lockin/shared/Components/Shared/ContextMenu";
 import { UseDataStore } from "@lockin/shared/Store/UseDataStore";
 import { CreateNewDocument } from "@lockin/shared/Lib/CreateDocument";

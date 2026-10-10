@@ -2,7 +2,7 @@
 
 import { useState, type ReactNode } from "react";
 import { Button, Input } from "@heroui/react";
-import { ChevronDown, Clock, FileText, Folder, Hash, Plus, Rocket, Star } from "lucide-react";
+import { ChevronDown, Clock, FileText, Folder, Hash, Plus, Rocket, Star } from "@lockin/shared/Components/Shared/UiIcons";
 import { DEFAULT_TAG_COLOR, type LibraryFolder, type LibraryTag } from "@lockin/shared/Types/Library";
 import { IsSameFilterGroup, type LibraryFilter } from "@lockin/shared/Types/LibraryFilter";
 import { UsePriorityStore } from "@lockin/shared/Store/UsePriorityStore";
@@ -21,9 +21,9 @@ interface LibraryFiltersProps {
   onCreateProject: () => void;
 }
 
-const PILL_BASE = "h-auto min-w-0 gap-1.5 rounded-full px-3 py-1.5 text-sm font-normal";
-const PILL_ACTIVE = "bg-black/[0.05] text-[var(--lk-ink)]";
-const PILL_INACTIVE = "text-[var(--lk-text2)] hover:bg-black/[0.03]";
+export const PILL_BASE = "h-auto min-w-0 gap-1.5 rounded-full px-3 py-1.5 text-sm font-normal";
+export const PILL_ACTIVE = "bg-black/[0.05] text-[var(--lk-ink)]";
+export const PILL_INACTIVE = "text-[var(--lk-text2)] hover:bg-black/[0.03]";
 /** Tmavé „New" tlačítko vpravo nahoře — stejné v Library i Your Projects. */
 export const NEW_BUTTON =
   "h-auto gap-1.5 rounded-full bg-[var(--lk-ink)] px-3 py-1.5 text-sm font-medium text-white hover:bg-black";
@@ -33,7 +33,7 @@ const ICON = { size: 14, strokeWidth: 1.75, className: "text-[var(--lk-text2)]" 
  * Skupina filtru: chip (klik = celá skupina) + šipka s výběrem konkrétní položky.
  * Aktivní stav je jedna společná vrstva pod oběma tlačítky — ta sama pozadí nemají.
  */
-function FilterGroup({
+export function FilterGroup({
   active,
   label,
   icon,
@@ -42,7 +42,7 @@ function FilterGroup({
   children,
 }: {
   active: boolean;
-  label: string;
+  label: ReactNode;
   icon: ReactNode;
   onToggle: () => void;
   menuLabel: string;

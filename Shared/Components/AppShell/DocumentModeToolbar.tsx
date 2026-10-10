@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { Button, Tabs } from "@heroui/react";
-import { ExternalLink, FileText, Maximize2, Minimize2, PenTool, Settings, Star, X } from "lucide-react";
+import { ExternalLink, FileText, Maximize2, Minimize2, PenTool, Settings, Star, X } from "@lockin/shared/Components/Shared/UiIcons";
 import { UseUiStore } from "@lockin/shared/Store/UseUiStore";
 import { Popover } from "@lockin/shared/Components/Shared/Popover";
 import { DocumentSettingsMenu } from "@lockin/shared/Components/DocumentView/DocumentSettingsMenu";

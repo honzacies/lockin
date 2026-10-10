@@ -2,7 +2,7 @@
 
 import { useState, type ReactNode } from "react";
 import { Button, Input } from "@heroui/react";
-import { ChevronDown, Plus, RotateCcw, Search, Settings2, Shuffle, Trash2, X } from "lucide-react";
+import { ChevronDown, Plus, RotateCcw, Search, Settings2, Shuffle, Trash2, X } from "@lockin/shared/Components/Shared/UiIcons";
 import { UseGraphStore, type GraphSettings } from "@lockin/shared/Store/UseGraphStore";
 import { SETTINGS_SECTION_TITLE, VariantToggle, VisibilityToggleList } from "@lockin/shared/Components/Shared/SettingsPanelPrimitives";
 import { TagColorPicker } from "@lockin/shared/Components/Shared/TagColorPicker";

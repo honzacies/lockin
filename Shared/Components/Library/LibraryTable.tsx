@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { FileText, Folder, Hash, Rocket } from "lucide-react";
+import { FileText, Folder, Hash, Rocket } from "@lockin/shared/Components/Shared/UiIcons";
 import type { LibraryRow, LibrarySource } from "@lockin/shared/Types/LibraryRow";
 import { FormatRelativeDate } from "@lockin/shared/Lib/FormatDate";
 import { ProjectIcon } from "@lockin/shared/Components/Shared/ProjectIcon";

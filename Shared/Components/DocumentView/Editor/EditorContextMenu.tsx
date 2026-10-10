@@ -24,7 +24,7 @@ import {
   Settings2,
   Strikethrough,
   Trash2,
-} from "lucide-react";
+} from "@lockin/shared/Components/Shared/UiIcons";
 import { ContextMenu, ContextMenuItem, ContextMenuLabel } from "@lockin/shared/Components/Shared/ContextMenu";
 import { UseUiStore, type BlockSettingsKind } from "@lockin/shared/Store/UseUiStore";
 import type { StyleableBlockType } from "@lockin/shared/Types/Project";

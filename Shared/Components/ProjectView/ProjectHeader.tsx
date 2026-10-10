@@ -15,7 +15,7 @@ import { UseFieldStore } from "@lockin/shared/Store/UseFieldStore";
 import { VisibleFields } from "@lockin/shared/Lib/ProjectFields";
 import { CustomFieldPill, FieldsMenu } from "@lockin/shared/Components/ProjectView/ProjectFields";
 import { Button } from "@heroui/react";
-import { SlidersHorizontal } from "lucide-react";
+import { SlidersHorizontal } from "@lockin/shared/Components/Shared/UiIcons";
 
 interface ProjectHeaderProps {
   project: Project;

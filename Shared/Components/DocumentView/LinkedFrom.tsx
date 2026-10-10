@@ -2,7 +2,7 @@
 
 import { useMemo } from "react";
 import Link from "next/link";
-import { FileText } from "lucide-react";
+import { FileText } from "@lockin/shared/Components/Shared/UiIcons";
 import type { DocumentRecord } from "@lockin/shared/Types/Project";
 import { UseDataStore } from "@lockin/shared/Store/UseDataStore";
 import { ProjectIcon } from "@lockin/shared/Components/Shared/ProjectIcon";

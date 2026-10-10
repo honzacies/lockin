@@ -2,7 +2,7 @@
 
 import { useEffect, useRef, useState, type CSSProperties } from "react";
 import { Button } from "@heroui/react";
-import { Clock, FolderPlus, GripVertical, ListChecks, Plus, Settings, X } from "lucide-react";
+import { Clock, FolderPlus, GripVertical, ListChecks, Plus, Settings, X } from "@lockin/shared/Components/Shared/UiIcons";
 import type { TodoListConfig, TodoListStyle, TodoTask } from "@lockin/shared/Types/QuickNotes";
 import { Popover } from "@lockin/shared/Components/Shared/Popover";
 import { DeadlinePickerPanel } from "@lockin/shared/Components/Shared/DeadlinePickerPanel";

@@ -1,7 +1,7 @@
 "use client";
 
 import { Button } from "@heroui/react";
-import { Eye, FileText, X } from "lucide-react";
+import { Eye, FileText, X } from "@lockin/shared/Components/Shared/UiIcons";
 import { UseDataStore } from "@lockin/shared/Store/UseDataStore";
 import { UseTodoPreviewStore } from "@lockin/shared/Store/UseTodoPreviewStore";
 import { RichTextEditor } from "@lockin/shared/Components/DocumentView/RichTextEditor";

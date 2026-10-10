@@ -2,7 +2,7 @@
 
 import type { ReactNode } from "react";
 import { Button } from "@heroui/react";
-import { ChevronDown, Settings } from "lucide-react";
+import { ChevronDown, Settings } from "@lockin/shared/Components/Shared/UiIcons";
 import { IconGlyph } from "@lockin/shared/Components/Shared/IconGlyph";
 import { ContextMenuItem } from "@lockin/shared/Components/Shared/ContextMenu";
 import { ContrastTextColor } from "@lockin/shared/Lib/Color";

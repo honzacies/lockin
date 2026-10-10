@@ -1,7 +1,7 @@
 "use client";
 
 import { useRouter } from "next/navigation";
-import { Play } from "lucide-react";
+import { Play } from "@lockin/shared/Components/Shared/UiIcons";
 import type { TodoSource } from "@lockin/shared/Lib/CollectTodoSources";
 import { ShowSession, StartListSession } from "@lockin/shared/Lib/TodoActions";
 

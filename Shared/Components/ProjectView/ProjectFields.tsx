@@ -19,7 +19,7 @@ import {
   Type,
   Zap,
   type LucideIcon,
-} from "lucide-react";
+} from "@lockin/shared/Components/Shared/UiIcons";
 import type { Project } from "@lockin/shared/Types/Project";
 import { BUILTIN_FIELDS, FIELD_TYPE_LABEL, type FieldDefinition, type FieldType, type FieldValue } from "@lockin/shared/Types/ProjectFields";
 import { Popover } from "@lockin/shared/Components/Shared/Popover";

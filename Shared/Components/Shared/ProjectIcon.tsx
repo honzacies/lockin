@@ -1,4 +1,4 @@
-import { Rocket } from "lucide-react";
+import { Rocket } from "@lockin/shared/Components/Shared/UiIcons";
 import { IconGlyph } from "./IconGlyph";
 
 interface ProjectIconProps {

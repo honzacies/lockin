@@ -5,7 +5,7 @@ import { IconGlyph } from "@lockin/shared/Components/Shared/IconGlyph";
 import { useEffect, useMemo, useRef, useState } from "react";
 import Link from "next/link";
 import { Input } from "@heroui/react";
-import { ArrowUpRight, Check, CornerDownRight, Eye, EyeOff, FileText, ListTodo, Plus, Search, Zap } from "lucide-react";
+import { ArrowUpRight, Check, CornerDownRight, Eye, EyeOff, FileText, ListTodo, Plus, Search, Zap } from "@lockin/shared/Components/Shared/UiIcons";
 import { UseDataStore } from "@lockin/shared/Store/UseDataStore";
 import { UseTodoStore } from "@lockin/shared/Store/UseTodoStore";
 import { UseUiStore } from "@lockin/shared/Store/UseUiStore";

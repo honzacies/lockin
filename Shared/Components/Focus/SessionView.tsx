@@ -5,7 +5,7 @@ import { UseSettingsStore } from "@lockin/shared/Store/UseSettingsStore";
 import { PlayChime } from "@lockin/shared/Lib/Chime";
 import { Button } from "@heroui/react";
 import { InlineEditable } from "@lockin/shared/Components/Shared/InlineEditable";
-import { Check, Maximize2, Minimize2, Pause as PauseIcon, Play, Plus, SkipForward, X } from "lucide-react";
+import { Check, Maximize2, Minimize2, Pause as PauseIcon, Play, Plus, SkipForward, X } from "@lockin/shared/Components/Shared/UiIcons";
 import {
   ColumnTasks,
   CurrentTask,

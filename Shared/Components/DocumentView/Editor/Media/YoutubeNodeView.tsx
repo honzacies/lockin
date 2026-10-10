@@ -3,7 +3,7 @@
 import { useState } from "react";
 import { NodeViewWrapper, type NodeViewProps } from "@tiptap/react";
 import { Button, Input } from "@heroui/react";
-import { X } from "lucide-react";
+import { X } from "@lockin/shared/Components/Shared/UiIcons";
 import { ExtractVideoId } from "@lockin/shared/Lib/Markdown";
 
 export function YoutubeNodeView({ node, updateAttributes, deleteNode }: NodeViewProps) {

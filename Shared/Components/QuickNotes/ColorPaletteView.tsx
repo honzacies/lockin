@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import { Button, Input } from "@heroui/react";
-import { Check, FolderPlus, Palette, Pencil, Plus, Settings, X } from "lucide-react";
+import { Check, FolderPlus, Palette, Pencil, Plus, Settings, X } from "@lockin/shared/Components/Shared/UiIcons";
 import type {
   ColorFormat,
   ColorPaletteConfig,

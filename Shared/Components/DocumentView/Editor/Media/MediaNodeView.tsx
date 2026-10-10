@@ -12,7 +12,7 @@ import {
   Rows3,
   Trash2,
   Upload,
-} from "lucide-react";
+} from "@lockin/shared/Components/Shared/UiIcons";
 import { Button } from "@heroui/react";
 import { DeleteMediaFile, ResolveMediaUrl, SaveMediaFile } from "@lockin/shared/Lib/MediaStorage";
 import { InlineEditable } from "@lockin/shared/Components/Shared/InlineEditable";

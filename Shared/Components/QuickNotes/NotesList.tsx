@@ -2,7 +2,7 @@
 
 import { useRef, useState } from "react";
 import { Button, Input } from "@heroui/react";
-import { X } from "lucide-react";
+import { X } from "@lockin/shared/Components/Shared/UiIcons";
 import { UseDataStore } from "@lockin/shared/Store/UseDataStore";
 
 export function NotesList() {

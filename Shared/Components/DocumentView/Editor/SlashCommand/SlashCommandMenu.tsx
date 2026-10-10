@@ -6,7 +6,7 @@ import {
   useImperativeHandle,
   useState,
 } from "react";
-import { ListChecks, Palette, Pencil } from "lucide-react";
+import { ListChecks, Palette, Pencil } from "@lockin/shared/Components/Shared/UiIcons";
 import { UseUiStore } from "@lockin/shared/Store/UseUiStore";
 import type { SlashCommandItem } from "./SlashCommandItems";
 

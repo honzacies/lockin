@@ -1,6 +1,6 @@
 "use client";
 
-import { Type } from "lucide-react";
+import { Type } from "@lockin/shared/Components/Shared/UiIcons";
 import type { TodoListStyle, TodoListVariant, TodoTextStyle } from "@lockin/shared/Types/QuickNotes";
 import { Popover } from "@lockin/shared/Components/Shared/Popover";
 import { ToolButton, Swatch, Stepper } from "@lockin/shared/Components/Shared/StyleControls";

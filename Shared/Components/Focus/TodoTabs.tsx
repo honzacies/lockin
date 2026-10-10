@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { Columns3, House } from "lucide-react";
+import { Columns3, House } from "@lockin/shared/Components/Shared/UiIcons";
 
 const TABS = [
   { href: "/Todo", label: "Home", icon: House },

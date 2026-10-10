@@ -1,7 +1,7 @@
 "use client";
 
 import { useMemo, useState, type ReactNode } from "react";
-import { Check, ChevronDown, Circle, FileText, Folder, ListTodo, Plus, Search, Zap } from "lucide-react";
+import { Check, ChevronDown, Circle, FileText, Folder, ListTodo, Plus, Search, Zap } from "@lockin/shared/Components/Shared/UiIcons";
 import { Input } from "@heroui/react";
 import { CollectTodoSources, SourceKey, SourceToImport, type TodoSource } from "@lockin/shared/Lib/CollectTodoSources";
 import { UseDataStore } from "@lockin/shared/Store/UseDataStore";

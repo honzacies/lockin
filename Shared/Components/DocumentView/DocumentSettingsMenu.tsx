@@ -18,7 +18,7 @@ import {
   Type,
   Upload,
   Wand2,
-} from "lucide-react";
+} from "@lockin/shared/Components/Shared/UiIcons";
 import { Button, Input } from "@heroui/react";
 import type { DocumentRecord } from "@lockin/shared/Types/Project";
 import { ContextMenuBackRow, ContextMenuItem, ContextMenuLabel } from "@lockin/shared/Components/Shared/ContextMenu";

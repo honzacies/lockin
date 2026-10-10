@@ -38,7 +38,7 @@ import {
   StickyNote,
   Trash2,
   Undo2,
-} from "lucide-react";
+} from "@lockin/shared/Components/Shared/UiIcons";
 import { UseDataStore } from "@lockin/shared/Store/UseDataStore";
 import { UseCanvasStore, type CanvasColor, type CanvasEdge, type CanvasFile, type CanvasNode, type CanvasSide, type CanvasStroke, type CanvasScene } from "@lockin/shared/Store/UseCanvasStore";
 import { DocHref } from "@lockin/shared/Lib/CollectTodoSources";

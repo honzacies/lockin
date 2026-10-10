@@ -38,7 +38,7 @@ import {
   Volume2,
   X,
   type LucideIcon,
-} from "lucide-react";
+} from "@lockin/shared/Components/Shared/UiIcons";
 import {
   ResolvedTheme,
   UseSettingsStore,

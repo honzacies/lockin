@@ -1,7 +1,7 @@
 "use client";
 
 import { Button } from "@heroui/react";
-import { Star } from "lucide-react";
+import { Star } from "@lockin/shared/Components/Shared/UiIcons";
 
 /** The star toggle used on every table/sidebar row (documents, projects,
  * folders, tags) — `stopPropagation` on click keeps it from also triggering

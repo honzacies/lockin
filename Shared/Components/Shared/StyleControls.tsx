@@ -2,7 +2,7 @@
 
 import type { ReactNode } from "react";
 import { Button } from "@heroui/react";
-import { Minus, Plus } from "lucide-react";
+import { Minus, Plus } from "@lockin/shared/Components/Shared/UiIcons";
 
 /** A toolbar-style trigger button (used as a Popover trigger for font/color
  * pickers) — highlights when its dropdown is open. */

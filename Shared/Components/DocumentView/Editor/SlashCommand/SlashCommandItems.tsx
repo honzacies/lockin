@@ -18,7 +18,7 @@ import {
   Table,
   Type,
   Video,
-} from "lucide-react";
+} from "@lockin/shared/Components/Shared/UiIcons";
 import type { StyleableBlockType } from "@lockin/shared/Types/Project";
 import { StripHeadingOverrides } from "./StripHeadingOverrides";
 

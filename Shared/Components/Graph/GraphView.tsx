@@ -2,7 +2,7 @@
 
 import { useEffect, useMemo, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
-import { ArrowUpRight, ChevronDown, List, Maximize, Shuffle, Waypoints } from "lucide-react";
+import { ArrowUpRight, ChevronDown, List, Maximize, Shuffle, Waypoints } from "@lockin/shared/Components/Shared/UiIcons";
 import { ContextMenu, ContextMenuItem, ContextMenuLabel } from "@lockin/shared/Components/Shared/ContextMenu";
 import { UseDataStore } from "@lockin/shared/Store/UseDataStore";
 import { UseGraphStore, type GraphSettings } from "@lockin/shared/Store/UseGraphStore";

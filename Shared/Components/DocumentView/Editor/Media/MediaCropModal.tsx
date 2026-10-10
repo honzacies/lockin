@@ -2,7 +2,7 @@
 
 import { useRef, useState } from "react";
 import { Button } from "@heroui/react";
-import { Check, X } from "lucide-react";
+import { Check, X } from "@lockin/shared/Components/Shared/UiIcons";
 
 interface Rect {
   x: number;

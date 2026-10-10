@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { Input } from "@heroui/react";
-import { ChevronDown, FolderOpen, HardDrive, Trash2 } from "lucide-react";
+import { ChevronDown, FolderOpen, HardDrive, Trash2 } from "@lockin/shared/Components/Shared/UiIcons";
 import { Popover } from "@lockin/shared/Components/Shared/Popover";
 import { ContextMenuItem, ContextMenuLabel } from "@lockin/shared/Components/Shared/ContextMenu";
 import { IconPicker } from "@lockin/shared/Components/Shared/IconPicker";

@@ -1,7 +1,7 @@
 "use client";
 
 import { Button } from "@heroui/react";
-import { Clock, Flag } from "lucide-react";
+import { Clock, Flag } from "@lockin/shared/Components/Shared/UiIcons";
 import { Popover } from "@lockin/shared/Components/Shared/Popover";
 import { DeadlinePickerPanel } from "@lockin/shared/Components/Shared/DeadlinePickerPanel";
 import { FormatDeadlineLabel, FormatRelativeDate } from "@lockin/shared/Lib/FormatDate";

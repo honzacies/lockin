@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { Tabs } from "@heroui/react";
-import { Clock, Zap } from "lucide-react";
+import { Clock, Zap } from "@lockin/shared/Components/Shared/UiIcons";
 import { DocumentModeToolbar } from "@lockin/shared/Components/AppShell/DocumentModeToolbar";
 import { DocumentCanvas } from "@lockin/shared/Components/DocumentView/DocumentCanvas";
 import { TodoList } from "@lockin/shared/Components/QuickNotes/TodoList";

@@ -3,7 +3,7 @@
 import { useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { Button } from "@heroui/react";
-import { FileText, Library, ListTodo, Lock, Rocket, Search, Shapes, Waypoints, X, Zap, type LucideIcon } from "lucide-react";
+import { FileText, Library, ListTodo, Lock, Rocket, Search, Shapes, Waypoints, X, Zap, type LucideIcon } from "@lockin/shared/Components/Shared/UiIcons";
 import { UseUiStore } from "@lockin/shared/Store/UseUiStore";
 import { UseDataStore } from "@lockin/shared/Store/UseDataStore";
 import { ProjectIcon } from "@lockin/shared/Components/Shared/ProjectIcon";

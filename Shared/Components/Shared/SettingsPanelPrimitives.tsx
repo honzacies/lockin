@@ -1,7 +1,7 @@
 "use client";
 
 import { Button } from "@heroui/react";
-import { Trash2 } from "lucide-react";
+import { Trash2 } from "@lockin/shared/Components/Shared/UiIcons";
 import { AppCheckbox } from "@lockin/shared/Components/Shared/AppCheckbox";
 
 /** Tiny uppercase section label used throughout every block-settings panel

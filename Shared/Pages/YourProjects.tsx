@@ -1,16 +1,20 @@
 "use client";
 
 import { EmptyWorkspace, UseIsWorkspaceEmpty } from "@lockin/shared/Components/AppShell/EmptyWorkspace";
-import { useEffect } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { Button } from "@heroui/react";
-import { Plus, Rocket } from "lucide-react";
+import { Plus, Rocket } from "@lockin/shared/Components/Shared/UiIcons";
 import { ProjectsTable } from "@lockin/shared/Components/YourProjects/ProjectsTable";
 import { ProjectsTableSkeleton } from "@lockin/shared/Components/YourProjects/ProjectsTableSkeleton";
 import { UseDataStore } from "@lockin/shared/Store/UseDataStore";
 import { UseUiStore } from "@lockin/shared/Store/UseUiStore";
 import { CreateNewProject } from "@lockin/shared/Lib/CreateProject";
 import { NEW_BUTTON } from "@lockin/shared/Components/Library/LibraryFilters";
+import { ProjectFiltersBar } from "@lockin/shared/Components/YourProjects/ProjectFiltersBar";
+import { FilterProjects, SortProjects, type ProjectFilter, type ProjectSort } from "@lockin/shared/Lib/ProjectFilters";
+import { UsePriorityStore } from "@lockin/shared/Store/UsePriorityStore";
+import { UseFadeOnChange } from "@lockin/shared/Lib/UseMotion";
 
 export default function YourProjectsPage() {
   const router = useRouter();
@@ -19,6 +23,25 @@ export default function YourProjectsPage() {
   const hydrated = UseDataStore((state) => state.hydrated);
   const openTab = UseUiStore((state) => state.OpenTab);
   const workspaceEmpty = UseIsWorkspaceEmpty();
+  const statuses = UsePriorityStore((s) => s.statuses);
+  const priorities = UsePriorityStore((s) => s.priorities);
+  const tags = UseDataStore((s) => s.tags);
+  const [filter, setFilter] = useState<ProjectFilter>({});
+  const [sort, setSort] = useState<ProjectSort | null>(null);
+  const tableRef = useRef<HTMLDivElement>(null);
+  UseFadeOnChange(tableRef, [JSON.stringify(filter), JSON.stringify(sort)]);
+
+  const shown = useMemo(() => {
+    const today = new Date().toLocaleDateString("sv"); // "YYYY-MM-DD" v místním čase
+    const filtered = FilterProjects(projects, filter, today);
+    return sort
+      ? SortProjects(filtered, sort, {
+          statusOrder: statuses.map((s) => s.id),
+          priorityOrder: priorities.map((p) => p.id),
+          tagName: (id) => tags[id]?.name ?? "",
+        })
+      : filtered;
+  }, [projects, filter, sort, statuses, priorities, tags]);
 
   useEffect(() => {
     openTab({ id: "your-projects", title: "Your Projects", href: "/YourProjects" });
@@ -59,7 +82,16 @@ export default function YourProjectsPage() {
           </Button>
         </div>
       ) : (
-        <ProjectsTable projects={projects} />
+        <>
+          <ProjectFiltersBar filter={filter} onFilterChange={setFilter} sort={sort} onSortChange={setSort} />
+          <div ref={tableRef} className="flex flex-col">
+            {shown.length ? (
+              <ProjectsTable projects={shown} />
+            ) : (
+              <p className="py-10 text-center text-sm text-[var(--lk-muted)]">No projects match these filters.</p>
+            )}
+          </div>
+        </>
       )}
     </div>
   );

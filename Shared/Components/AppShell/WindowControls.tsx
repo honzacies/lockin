@@ -1,6 +1,6 @@
 "use client";
 
-import { Minus, Square, X } from "lucide-react";
+import { Minus, Square, X } from "@lockin/shared/Components/Shared/UiIcons";
 import { useWindowControls } from "./UseWindowControls";
 
 /** Windows-style caption buttons (minimize / maximize-restore / close) for

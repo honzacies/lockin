@@ -1,7 +1,7 @@
 "use client";
 
 import { Button } from "@heroui/react";
-import { PanelLeft } from "lucide-react";
+import { PanelLeft } from "@lockin/shared/Components/Shared/UiIcons";
 import { TabStrip } from "./TabStrip";
 import { WindowControls } from "./WindowControls";
 

@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import { Button, Input } from "@heroui/react";
-import { ChevronDown, Plus } from "lucide-react";
+import { ChevronDown, Plus } from "@lockin/shared/Components/Shared/UiIcons";
 import { DEFAULT_TAG_COLOR } from "@lockin/shared/Types/Library";
 import { Popover } from "@lockin/shared/Components/Shared/Popover";
 import { ContextMenuItem } from "@lockin/shared/Components/Shared/ContextMenu";

@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import { Button, Input } from "@heroui/react";
-import { FileText, Home, Plus } from "lucide-react";
+import { FileText, Home, Plus } from "@lockin/shared/Components/Shared/UiIcons";
 import type { DocumentSummary } from "@lockin/shared/Types/Project";
 import { ContextMenu } from "@lockin/shared/Components/Shared/ContextMenu";
 import { SidebarItemMenu } from "@lockin/shared/Components/AppShell/SidebarItemMenu";

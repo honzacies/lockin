@@ -3,7 +3,7 @@
 import { ProjectUpdatedAt } from "@lockin/shared/Lib/CreateProject";
 import { useState } from "react";
 import { useRouter } from "next/navigation";
-import { Calendar } from "lucide-react";
+import { Calendar } from "@lockin/shared/Components/Shared/UiIcons";
 import { DEFAULT_TAG_COLOR } from "@lockin/shared/Types/Library";
 import type { Project } from "@lockin/shared/Types/Project";
 import { PriorityChip } from "@lockin/shared/Components/Shared/PriorityChip";

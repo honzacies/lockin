@@ -6,7 +6,7 @@ import type { TodoGroup, TodoListConfig, TodoListStyle, TodoTask } from "@lockin
 import { NewTodoGroup } from "@lockin/shared/Types/QuickNotes";
 import { TodoListView } from "@lockin/shared/Components/QuickNotes/TodoListView";
 import { Button } from "@heroui/react";
-import { Check, Circle, ListTodo, Plus } from "lucide-react";
+import { Check, Circle, ListTodo, Plus } from "@lockin/shared/Components/Shared/UiIcons";
 import { UseDataStore } from "@lockin/shared/Store/UseDataStore";
 import { UseFocusStore } from "@lockin/shared/Store/UseFocusStore";
 import { DocHref, FindLists, SourceKey, SourceToImport } from "@lockin/shared/Lib/CollectTodoSources";

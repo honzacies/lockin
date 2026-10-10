@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { Button } from "@heroui/react";
-import { ChevronDown, Type, X } from "lucide-react";
+import { ChevronDown, Type, X } from "@lockin/shared/Components/Shared/UiIcons";
 import type { BlockStyle, StyleableBlockType } from "@lockin/shared/Types/Project";
 import { BLOCK_STYLE_FIELDS } from "@lockin/shared/Components/DocumentView/Editor/StyleVars";
 import { UseUiStore } from "@lockin/shared/Store/UseUiStore";

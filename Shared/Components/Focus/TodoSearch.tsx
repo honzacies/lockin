@@ -2,7 +2,7 @@
 
 import { useEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import { Input } from "@heroui/react";
-import { Circle, ListTodo, Search } from "lucide-react";
+import { Circle, ListTodo, Search } from "@lockin/shared/Components/Shared/UiIcons";
 import { ContextMenuItem, ContextMenuLabel } from "@lockin/shared/Components/Shared/ContextMenu";
 import { CollectTodoSources, SourceKey, SourceToImport, type TodoSource } from "@lockin/shared/Lib/CollectTodoSources";
 import { UseDataStore } from "@lockin/shared/Store/UseDataStore";

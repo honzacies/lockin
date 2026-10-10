@@ -19,7 +19,7 @@ import {
   Strikethrough,
   Type,
   Underline,
-} from "lucide-react";
+} from "@lockin/shared/Components/Shared/UiIcons";
 import { Popover } from "@lockin/shared/Components/Shared/Popover";
 import { FontPicker } from "@lockin/shared/Components/DocumentView/StyleEditor/FontPicker";
 import { ColorPicker } from "@lockin/shared/Components/DocumentView/StyleEditor/ColorPicker";

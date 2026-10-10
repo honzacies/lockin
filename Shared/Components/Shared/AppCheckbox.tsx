@@ -2,7 +2,7 @@
 
 import type { CSSProperties, ReactNode } from "react";
 import { Checkbox } from "@heroui/react";
-import { Check } from "lucide-react";
+import { Check } from "@lockin/shared/Components/Shared/UiIcons";
 
 /**
  * Jediný checkbox appky (úkoly, filtry, nastavení panelů). Nezaškrtnutý =

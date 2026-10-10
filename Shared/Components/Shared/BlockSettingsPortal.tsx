@@ -3,7 +3,7 @@
 import type { ReactNode } from "react";
 import { createPortal } from "react-dom";
 import { Button } from "@heroui/react";
-import { X } from "lucide-react";
+import { X } from "@lockin/shared/Components/Shared/UiIcons";
 
 /** The settings-panel header (title + close button), portaled into the
  * shared settings-panel slot — shared by ColorPaletteView, ScenarioView, and

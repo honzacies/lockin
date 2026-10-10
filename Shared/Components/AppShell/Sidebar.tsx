@@ -28,7 +28,7 @@ import {
   ListTodo,
   Waypoints,
   Shapes,
-} from "lucide-react";
+} from "@lockin/shared/Components/Shared/UiIcons";
 import { UseDataStore } from "@lockin/shared/Store/UseDataStore";
 import { UseCanvasStore } from "@lockin/shared/Store/UseCanvasStore";
 import { DEFAULT_TAG_COLOR } from "@lockin/shared/Types/Library";

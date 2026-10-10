@@ -5,7 +5,7 @@ import { UseFadeOnChange } from "@lockin/shared/Lib/UseMotion";
 import { EmptyWorkspace, UseIsWorkspaceEmpty } from "@lockin/shared/Components/AppShell/EmptyWorkspace";
 import { Suspense, useEffect, useMemo, useRef, useState } from "react";
 import { useSearchParams } from "next/navigation";
-import { Library } from "lucide-react";
+import { Library } from "@lockin/shared/Components/Shared/UiIcons";
 import { LibraryFilters } from "@lockin/shared/Components/Library/LibraryFilters";
 import { LibraryTable } from "@lockin/shared/Components/Library/LibraryTable";
 import { LibraryTableSkeleton } from "@lockin/shared/Components/Library/LibraryTableSkeleton";

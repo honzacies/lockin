@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { Button } from "@heroui/react";
-import { ListTodo, Monitor, Play } from "lucide-react";
+import { ListTodo, Monitor, Play } from "@lockin/shared/Components/Shared/UiIcons";
 import { Popover } from "@lockin/shared/Components/Shared/Popover";
 import { ContextMenuItem, ContextMenuLabel } from "@lockin/shared/Components/Shared/ContextMenu";
 import { TodoSearch } from "@lockin/shared/Components/Focus/TodoSearch";

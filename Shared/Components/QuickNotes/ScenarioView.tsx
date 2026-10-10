@@ -1,7 +1,7 @@
 "use client";
 
 import { Button } from "@heroui/react";
-import { Clapperboard, Plus, Settings, X } from "lucide-react";
+import { Clapperboard, Plus, Settings, X } from "@lockin/shared/Components/Shared/UiIcons";
 import type { ScenarioBeat, ScenarioConfig, ScenarioStyle } from "@lockin/shared/Types/Scenario";
 import { CountScenarioWords } from "@lockin/shared/Types/Scenario";
 import { BlockSettingsPortal } from "@lockin/shared/Components/Shared/BlockSettingsPortal";

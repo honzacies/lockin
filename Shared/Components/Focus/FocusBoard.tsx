@@ -15,7 +15,7 @@ import {
   Timer,
   Trash2,
   X,
-} from "lucide-react";
+} from "@lockin/shared/Components/Shared/UiIcons";
 import { InlineEditable } from "@lockin/shared/Components/Shared/InlineEditable";
 import { IconPicker } from "@lockin/shared/Components/Shared/IconPicker";
 import { Popover } from "@lockin/shared/Components/Shared/Popover";

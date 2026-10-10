@@ -7,7 +7,7 @@ import {
   useState,
   type ReactNode,
 } from "react";
-import { Check, ChevronLeft } from "lucide-react";
+import { Check, ChevronLeft } from "@lockin/shared/Components/Shared/UiIcons";
 import { UsePresence } from "@lockin/shared/Lib/UseMotion";
 
 interface ContextMenuProps {

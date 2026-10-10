@@ -2,7 +2,7 @@
 
 import { useEffect, useRef, useState } from "react";
 import type { Editor } from "@tiptap/react";
-import { Plus, Trash2, X } from "lucide-react";
+import { Plus, Trash2, X } from "@lockin/shared/Components/Shared/UiIcons";
 
 interface Box {
   left: number;

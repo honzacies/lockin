@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
-import { ArrowUpRight, Folder, Palette, Pencil, Star, Tag, Trash2 } from "lucide-react";
+import { ArrowUpRight, Folder, Palette, Pencil, Star, Tag, Trash2 } from "@lockin/shared/Components/Shared/UiIcons";
 import { ContextMenuBackRow, ContextMenuItem, ContextMenuLabel } from "@lockin/shared/Components/Shared/ContextMenu";
 import { IconPicker } from "@lockin/shared/Components/Shared/IconPicker";
 import { TagColorPicker } from "@lockin/shared/Components/Shared/TagColorPicker";

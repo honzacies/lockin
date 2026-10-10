@@ -3,7 +3,7 @@
 import { useState } from "react";
 import { Button, Calendar, TimeField } from "@heroui/react";
 import type { CalendarDate, Time } from "@internationalized/date";
-import { Clock } from "lucide-react";
+import { Clock } from "@lockin/shared/Components/Shared/UiIcons";
 import {
   FromCalendarDate,
   FromTimeValue,
