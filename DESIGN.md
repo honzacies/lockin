@@ -96,6 +96,23 @@ The reference is the slash menu
 - Right-click menus use `ContextMenu` as is. While a menu is open the page under it doesn't
   scroll, and the editor's bubble toolbar stays hidden.
 
+## 4b. Project properties
+
+- One field system for the project header (later also the Your Projects table, filters and
+  templates). Built-in fields (tags, priority, status, progress, deadline) plus the workspace's
+  own fields ([UseFieldStore](Shared/Store/UseFieldStore.ts), values in `project.fields`).
+- The header looks exactly as before until you use something new. The properties button (sliders
+  icon) only appears on hover at the end of the field row.
+- Properties panel: check a field to show or hide it (the value is kept). Reorder by dragging the
+  grip, and only there, so nothing gets reordered by accident in the header itself.
+- Clicking a custom field pill opens the field editor: icon + name, Type chips, the value, then
+  Delete (removes the field from this project) on the left and Clear / Save on the right.
+  Everything is a draft until Save. Name, icon and type apply to all projects, and a type
+  change converts their values too ([ConvertValue](Shared/Lib/ProjectFields.ts)).
+- Dates use the same HeroUI calendar as the deadline (`DateCalendar`).
+- Zustand selectors must return stable references. `s.list ?? []` creates a new array on every
+  call and loops React forever (error #185). Select the object and default outside.
+
 ## 5. Controls
 
 - **HeroUI v3 first.** Use `Button`, `Input`, `Switch`, `ToggleButtonGroup` (segmented choices),

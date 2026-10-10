@@ -2,7 +2,7 @@
 import assert from "node:assert/strict";
 import type { Project } from "../Types/Project";
 import type { FieldDefinition } from "../Types/ProjectFields";
-import { AddableFields, HideField, SetFieldValue, ShowField, VisibleFields } from "./ProjectFields";
+import { AddableFields, ConvertValue, HideField, ReorderFields, SetFieldValue, ShowField, VisibleFields } from "./ProjectFields";
 
 const base: Project = {
   id: "p",
@@ -40,4 +40,15 @@ assert.equal(SetFieldValue(withVersion, "version", "").fields?.version, undefine
 
 // Pořadí podle fieldOrder, zbytek ve výchozím pořadí.
 assert.deepEqual(VisibleFields({ ...base, fieldOrder: ["status", "tags"] }, defs).slice(0, 3), ["status", "tags", "priority"]);
+// Změna typu: převoditelné hodnoty zůstanou, ostatní se vyprázdní.
+assert.equal(ConvertValue("1.2", "text", "url"), "1.2");
+assert.equal(ConvertValue(42, "number", "text"), "42");
+assert.equal(ConvertValue("7", "text", "number"), 7);
+assert.equal(ConvertValue("abc", "text", "number"), null);
+assert.deepEqual(ConvertValue("o1", "select", "multiSelect"), ["o1"]);
+assert.equal(ConvertValue(["o1", "o2"], "multiSelect", "select"), "o1");
+assert.equal(ConvertValue(true, "checkbox", "date"), null);
+
+// Přeřazení.
+assert.deepEqual(VisibleFields(ReorderFields(base, ["progress", "tags", "priority", "status", "deadline"]), defs), ["progress", "tags", "priority", "status", "deadline"]);
 console.log("ProjectFields ok");

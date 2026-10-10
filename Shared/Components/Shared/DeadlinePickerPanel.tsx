@@ -34,25 +34,7 @@ export function DeadlinePickerPanel({
 
   return (
     <div className="flex w-fit flex-col gap-2 p-2">
-      <Calendar
-        aria-label="Deadline date"
-        value={ToCalendarDate(date)}
-        onChange={(next) => onChangeDate(FromCalendarDate((next as CalendarDate) ?? null))}
-      >
-        <Calendar.Header>
-          <Calendar.Heading />
-          <Calendar.NavButton slot="previous" />
-          <Calendar.NavButton slot="next" />
-        </Calendar.Header>
-        <Calendar.Grid>
-          <Calendar.GridHeader>
-            {(day) => <Calendar.HeaderCell>{day}</Calendar.HeaderCell>}
-          </Calendar.GridHeader>
-          <Calendar.GridBody>
-            {(cellDate) => <Calendar.Cell date={cellDate} />}
-          </Calendar.GridBody>
-        </Calendar.Grid>
-      </Calendar>
+      <DateCalendar label="Deadline date" date={date} onChange={onChangeDate} />
 
       <TimeField
         aria-label="Deadline time"
@@ -105,5 +87,22 @@ export function DeadlinePickerPanel({
         </Button>
       </div>
     </div>
+  );
+}
+
+/** Samotný kalendář (HeroUI) nad uloženým „YYYY-MM-DD" — deadline i vlastní pole s datem. */
+export function DateCalendar({ date, onChange, label }: { date: string | null; onChange: (date: string | null) => void; label: string }) {
+  return (
+    <Calendar aria-label={label} value={ToCalendarDate(date)} onChange={(next) => onChange(FromCalendarDate((next as CalendarDate) ?? null))}>
+      <Calendar.Header>
+        <Calendar.Heading />
+        <Calendar.NavButton slot="previous" />
+        <Calendar.NavButton slot="next" />
+      </Calendar.Header>
+      <Calendar.Grid>
+        <Calendar.GridHeader>{(day) => <Calendar.HeaderCell>{day}</Calendar.HeaderCell>}</Calendar.GridHeader>
+        <Calendar.GridBody>{(cellDate) => <Calendar.Cell date={cellDate} />}</Calendar.GridBody>
+      </Calendar.Grid>
+    </Calendar>
   );
 }

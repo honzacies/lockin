@@ -1,5 +1,5 @@
 import type { Project } from "@lockin/shared/Types/Project";
-import { BUILTIN_FIELDS, type FieldDefinition, type FieldValue } from "@lockin/shared/Types/ProjectFields";
+import { BUILTIN_FIELDS, type FieldDefinition, type FieldType, type FieldValue } from "@lockin/shared/Types/ProjectFields";
 
 /**
  * Pole, která projekt ukazuje, v pořadí hlavičky: nejdřív podle
@@ -43,4 +43,23 @@ export function SetFieldValue(project: Project, fieldId: string, value: FieldVal
   if (value === null || value === "" || (Array.isArray(value) && value.length === 0)) delete fields[fieldId];
   else fields[fieldId] = value;
   return { ...project, fields };
+}
+
+/**
+ * Hodnota po změně typu pole: co jde převést, zůstane (text ↔ odkaz, číslo →
+ * text, číselný text → číslo, výběr ↔ více výběrů), zbytek se vyprázdní.
+ */
+export function ConvertValue(value: FieldValue, from: FieldType, to: FieldType): FieldValue {
+  if (value === null || from === to) return value;
+  const textual = (t: FieldType) => t === "text" || t === "url";
+  if (textual(to) && (textual(from) || from === "number")) return String(value);
+  if (to === "number" && textual(from)) return Number.isNaN(Number(value)) || String(value).trim() === "" ? null : Number(value);
+  if (from === "select" && to === "multiSelect") return [String(value)];
+  if (from === "multiSelect" && to === "select") return Array.isArray(value) && value.length ? value[0] : null;
+  return null;
+}
+
+/** Nové pořadí viditelných polí (přetažení v panelu polí). */
+export function ReorderFields(project: Project, ordered: string[]): Project {
+  return { ...project, fieldOrder: [...new Set(ordered)] };
 }
