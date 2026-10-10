@@ -13,6 +13,12 @@ interface PopoverProps {
    * hrany okna — panel by jinak vyjel pod ni a byl nedosažitelný. */
   side?: "bottom" | "top";
   panelClassName?: string;
+  /** Obsah panelu po pravém kliku na trigger (např. nastavení pole). Bez něj pravý klik nic nedělá. */
+  contextChildren?: (close: () => void) => ReactNode;
+  /** Šířka panelu pro pravý klik, když se liší od běžné. */
+  contextPanelClassName?: string;
+  /** false = levý klik panel neotevírá (trigger má vlastní akci, např. zaškrtnutí). */
+  openOnLeftClick?: boolean;
 }
 
 /**
@@ -26,8 +32,12 @@ export function Popover({
   align = "left",
   side = "bottom",
   panelClassName,
+  contextChildren,
+  contextPanelClassName,
+  openOnLeftClick = true,
 }: PopoverProps) {
   const [open, setOpen] = useState(false);
+  const [mode, setMode] = useState<"left" | "context">("left");
   const rootRef = useRef<HTMLDivElement>(null);
   const panelRef = useRef<HTMLDivElement>(null);
   const { mounted, closing } = UsePresence(open);
@@ -108,14 +118,24 @@ export function Popover({
        * a right-click (context menu) doesn't also toggle the popover. */}
       <div
         onPointerDownCapture={(e) => {
-          if (e.button !== 0) return;
-          setOpen((o) => !o);
+          if (e.button !== 0 || !openOnLeftClick) return;
+          setMode("left");
+          setOpen((o) => !(o && mode === "left"));
+        }}
+        onContextMenu={(e) => {
+          if (!contextChildren) return;
+          e.preventDefault();
+          e.stopPropagation(); // jinak by se otevřelo i kontextové menu rodiče
+          setMode("context");
+          setOpen(true);
         }}
         // Klávesnice: Enter / mezerník na fokusovaném triggeru (tlačítku) otevře i zavře panel.
         onKeyDownCapture={(e) => {
           if (e.key !== "Enter" && e.key !== " ") return;
           if (e.target instanceof HTMLInputElement || e.target instanceof HTMLTextAreaElement) return;
+          if (!openOnLeftClick) return;
           e.preventDefault();
+          setMode("left");
           setOpen((o) => !o);
         }}
         className="contents cursor-pointer"
@@ -137,9 +157,11 @@ export function Popover({
           // clicking a date visually did nothing. Same fix already applied
           // to ContextMenu.tsx's panel for the same reason.
           data-marquee-ignore="true"
-          className={`fixed z-[250] select-none overflow-y-auto overscroll-contain rounded-xl border border-[var(--lk-line)] bg-white shadow-xl ${closing ? "lockin-fade-out" : "lockin-fade-in"} ${panelClassName ?? ""}`}
+          className={`fixed z-[250] select-none overflow-y-auto overscroll-contain rounded-xl border border-[var(--lk-line)] bg-white shadow-xl ${closing ? "lockin-fade-out" : "lockin-fade-in"} ${
+            mode === "context" && contextPanelClassName ? contextPanelClassName : (panelClassName ?? "")
+          }`}
         >
-          {children(() => setOpen(false))}
+          {mode === "context" && contextChildren ? contextChildren(() => setOpen(false)) : children(() => setOpen(false))}
         </div>
       ) : null}
     </div>

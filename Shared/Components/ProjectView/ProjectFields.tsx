@@ -92,10 +92,124 @@ function TypeChips({ value, onChange }: { value: FieldType; onChange: (type: Fie
   );
 }
 
+/** Výchozí ikona typu jako řetězec pro IconPicker (ukáže ji jako aktuální ikonu pole). */
+const TYPE_ICON_NAME: Record<FieldType, string> = {
+  text: "lucide:type",
+  number: "lucide:hash",
+  date: "lucide:calendar",
+  select: "lucide:list",
+  multiSelect: "lucide:list-checks",
+  checkbox: "lucide:square-check",
+  url: "lucide:link-2",
+};
+
 /**
- * Pilulka vlastního pole v hlavičce projektu. Klik otevře editor pole:
- * ikona + název, typ, hodnota a dole Delete (odebere pole z projektu),
- * Clear (vyprázdní hodnotu) a Save. Ano/ne se dá přepnout i rovnou v pilulce.
+ * Hodnota pole podle typu — výběr voleb, kalendář, pole pro text/číslo/odkaz
+ * nebo zaškrtnutí. Sdílí ho rychlá úprava (levý klik) i nastavení pole.
+ * `onCommit` = Enter v textovém poli.
+ */
+function ValueInput({
+  fieldId,
+  name,
+  type,
+  value,
+  onChange,
+  onCommit,
+}: {
+  fieldId: string;
+  name: string;
+  type: FieldType;
+  value: FieldValue;
+  onChange: (value: FieldValue) => void;
+  onCommit?: () => void;
+}) {
+  const [optionDraft, setOptionDraft] = useState("");
+  // Selektor musí vracet stabilní referenci (ne nové `[]`), jinak se zustand zacyklí.
+  const live = UseFieldStore((s) => s.definitions.find((d) => d.id === fieldId));
+  const options = live?.options ?? [];
+  const selectedIds = Array.isArray(value) ? value : typeof value === "string" ? [value] : [];
+
+  function ToggleOption(id: string) {
+    if (type === "multiSelect") onChange(selectedIds.includes(id) ? selectedIds.filter((x) => x !== id) : [...selectedIds, id]);
+    else onChange(selectedIds[0] === id ? null : id);
+  }
+  function AddOption() {
+    if (!optionDraft.trim()) return;
+    // Volba je sdílená — do pole se přidá hned.
+    if (!live?.options) UseFieldStore.getState().UpdateField(fieldId, { options: [] });
+    const option = UseFieldStore.getState().AddOption(fieldId, optionDraft);
+    setOptionDraft("");
+    if (option) onChange(type === "multiSelect" ? [...selectedIds, option.id] : option.id);
+  }
+
+  if (type === "select" || type === "multiSelect")
+    return (
+      <div className="flex flex-col gap-px">
+        {options.map((option) => (
+          <ContextMenuItem key={option.id} icon={<OptionIcon option={option} />} selected={selectedIds.includes(option.id)} onClick={() => ToggleOption(option.id)}>
+            {option.label}
+          </ContextMenuItem>
+        ))}
+        <div className="flex items-center gap-1 px-1 pt-1">
+          <Input
+            value={optionDraft}
+            onChange={(e) => setOptionDraft(e.target.value)}
+            onKeyDown={(e) => {
+              if (e.key === "Enter") AddOption();
+            }}
+            placeholder="New option…"
+            aria-label="New option name"
+            className="h-7 min-w-0 flex-1 rounded-md bg-transparent px-1.5 text-[13px] shadow-none"
+          />
+          <Button
+            variant="ghost"
+            isIconOnly
+            aria-label="Add option"
+            isDisabled={!optionDraft.trim()}
+            onPress={AddOption}
+            className="h-7 w-7 min-w-0 rounded-md text-[var(--lk-muted)] hover:bg-black/[0.06] hover:text-[var(--lk-ink)]"
+          >
+            <Plus size={14} strokeWidth={1.75} />
+          </Button>
+        </div>
+      </div>
+    );
+  if (type === "checkbox")
+    return (
+      <div className="px-1">
+        <AppCheckbox checked={value === true} onChange={onChange} label="Checked" className="text-[13px] text-[var(--lk-ink)]" />
+      </div>
+    );
+  if (type === "date")
+    return (
+      <div className="flex justify-center">
+        <DateCalendar label={name || "Date"} date={typeof value === "string" ? value : null} onChange={onChange} />
+      </div>
+    );
+  return (
+    <Input
+      autoFocus
+      type={type === "number" ? "number" : type === "url" ? "url" : "text"}
+      value={value === null ? "" : String(value)}
+      onChange={(e) => {
+        const raw = e.target.value;
+        onChange(type === "number" ? (raw === "" || Number.isNaN(Number(raw)) ? null : Number(raw)) : raw);
+      }}
+      onKeyDown={(e) => {
+        if (e.key === "Enter") onCommit?.();
+      }}
+      placeholder={type === "url" ? "https://…" : "Empty"}
+      aria-label={`${name} value`}
+      className="h-8 rounded-md px-2 text-[13px]"
+    />
+  );
+}
+
+/**
+ * Pilulka vlastního pole v hlavičce projektu.
+ * - Levý klik = hodnota: výběr voleb, kalendář, nebo pole pro text / číslo / odkaz.
+ *   Ano/ne se přepne rovnou zaškrtnutím v pilulce.
+ * - Pravý klik = nastavení pole (ikona, název, typ, hodnota, Delete / Clear / Save).
  */
 export function CustomFieldPill({
   project,
@@ -108,6 +222,7 @@ export function CustomFieldPill({
 }) {
   const value = project.fields?.[field.id] ?? null;
   const options = field.options ?? [];
+  const SetValue = (next: FieldValue) => onUpdate({ fields: SetFieldValue(project, field.id, next).fields });
 
   let shown: ReactNode = null;
   if (field.type === "select" || field.type === "multiSelect") {
@@ -125,29 +240,29 @@ export function CustomFieldPill({
     shown = <span className="max-w-[220px] truncate text-[var(--lk-ink)]">{field.type === "date" ? FormatDate(String(value)) : String(value)}</span>;
   }
 
+  const isCheckbox = field.type === "checkbox";
   return (
     <span className="inline-flex items-center gap-0.5">
-      {field.type === "checkbox" ? (
-        <span className={`inline-flex items-center ${NEUTRAL_PILL} pr-1`}>
-          <AppCheckbox
-            checked={value === true}
-            onChange={(checked) => onUpdate({ fields: SetFieldValue(project, field.id, checked).fields })}
-            size={14}
-            ariaLabel={field.name}
-          />
-        </span>
-      ) : null}
       <Popover
-        panelClassName="w-[300px] p-2"
-        trigger={() => (
-          <Button variant="ghost" aria-label={`Edit ${field.name}`} className={NEUTRAL_PILL}>
-            <FieldIcon field={field} />
-            <span className={shown ? "text-[var(--lk-muted)]" : ""}>{field.name}</span>
-            {shown}
-          </Button>
-        )}
+        openOnLeftClick={!isCheckbox}
+        panelClassName={field.type === "date" ? "w-fit p-2" : "w-60 p-1.5"}
+        contextPanelClassName="w-[300px] p-2"
+        contextChildren={(close) => <FieldEditor project={project} field={field} onUpdate={onUpdate} close={close} />}
+        trigger={() =>
+          isCheckbox ? (
+            <span data-tooltip="Right-click for property settings" className={`inline-flex items-center ${NEUTRAL_PILL}`}>
+              <AppCheckbox checked={value === true} onChange={SetValue} size={14} label={field.name} />
+            </span>
+          ) : (
+            <Button variant="ghost" aria-label={`Change ${field.name}`} data-tooltip="Right-click for property settings" className={NEUTRAL_PILL}>
+              <FieldIcon field={field} />
+              <span className={shown ? "text-[var(--lk-muted)]" : ""}>{field.name}</span>
+              {shown}
+            </Button>
+          )
+        }
       >
-        {(close) => <FieldEditor project={project} field={field} onUpdate={onUpdate} close={close} />}
+        {(close) => <QuickValue field={field} value={value} onChange={SetValue} close={close} />}
       </Popover>
       {field.type === "url" && typeof value === "string" && value ? (
         <Button
@@ -164,7 +279,50 @@ export function CustomFieldPill({
   );
 }
 
-/** Editor pole: všechno je koncept, uloží se až „Save" (název, ikona a typ platí pro všechny projekty). */
+/** Levý klik: jen hodnota. Výběr a datum se ukládají hned, text / číslo / odkaz Enterem nebo Save. */
+function QuickValue({ field, value, onChange, close }: { field: FieldDefinition; value: FieldValue; onChange: (v: FieldValue) => void; close: () => void }) {
+  const [draft, setDraft] = useState<FieldValue>(value);
+  const immediate = field.type === "select" || field.type === "multiSelect" || field.type === "date";
+  const header = field.type === "select" || field.type === "multiSelect" ? `Available ${field.name}` : field.name;
+
+  if (immediate)
+    return (
+      <div className="flex flex-col gap-1">
+        <PickerHeader title={header} />
+        <ValueInput
+          fieldId={field.id}
+          name={field.name}
+          type={field.type}
+          value={value}
+          onChange={(next) => {
+            onChange(next);
+            if (field.type !== "multiSelect") close();
+          }}
+        />
+      </div>
+    );
+
+  function Commit() {
+    onChange(draft);
+    close();
+  }
+  return (
+    <div className="flex flex-col gap-1.5">
+      <PickerHeader title={header} />
+      <ValueInput fieldId={field.id} name={field.name} type={field.type} value={draft} onChange={setDraft} onCommit={Commit} />
+      <div className="flex justify-end gap-1">
+        <Button variant="ghost" onPress={() => { onChange(null); close(); }} className="h-7 rounded-md px-2.5 text-xs font-medium text-[var(--lk-text2)] hover:bg-black/[0.05]">
+          Clear
+        </Button>
+        <Button variant="ghost" onPress={Commit} className="h-7 rounded-md bg-[#0088ff] px-3 text-xs font-medium text-[#fff] hover:bg-[#0077e0]">
+          Save
+        </Button>
+      </div>
+    </div>
+  );
+}
+
+/** Nastavení pole (pravý klik): všechno je koncept, uloží se až „Save" (název, ikona a typ platí pro všechny projekty). */
 function FieldEditor({
   project,
   field,
@@ -180,10 +338,6 @@ function FieldEditor({
   const [icon, setIcon] = useState(field.icon);
   const [type, setType] = useState<FieldType>(field.type);
   const [value, setValue] = useState<FieldValue>(project.fields?.[field.id] ?? null);
-  const [optionDraft, setOptionDraft] = useState("");
-  // Selektor musí vracet stabilní referenci (ne nové `[]`), jinak se zustand zacyklí.
-  const live = UseFieldStore((s) => s.definitions.find((d) => d.id === field.id));
-  const options = live?.options ?? [];
 
   function ChangeType(next: FieldType) {
     setValue((v) => ConvertValue(v, type, next));
@@ -211,28 +365,11 @@ function FieldEditor({
     close();
   }
 
-  function ToggleOption(id: string) {
-    if (type === "multiSelect") {
-      const ids = Array.isArray(value) ? value : [];
-      setValue(ids.includes(id) ? ids.filter((x) => x !== id) : [...ids, id]);
-    } else setValue(value === id ? null : id);
-  }
-
-  function AddOption() {
-    if (!optionDraft.trim()) return;
-    // Volba se do pole přidá hned (je sdílená), vybraná je zatím jen v konceptu.
-    if (!field.options) UseFieldStore.getState().UpdateField(field.id, { options: [] });
-    const option = UseFieldStore.getState().AddOption(field.id, optionDraft);
-    setOptionDraft("");
-    if (option) ToggleOption(option.id);
-  }
-
-  const selectedIds = Array.isArray(value) ? value : typeof value === "string" ? [value] : [];
-
   return (
     <div className="flex flex-col gap-2.5">
       <div className="flex items-center gap-1.5">
-        <IconPicker icon={icon} onChange={setIcon} size={30} glyphScale={0.55} />
+        {/* Bez vlastní ikony ukáže ikonu typu — tu, kterou pole v hlavičce opravdu má. */}
+        <IconPicker icon={icon ?? TYPE_ICON_NAME[type]} onChange={setIcon} size={30} glyphScale={0.55} />
         <Input
           value={name}
           onChange={(e) => setName(e.target.value)}
@@ -254,61 +391,7 @@ function FieldEditor({
 
       <div className="flex flex-col gap-1">
         <PickerHeader title={type === "select" || type === "multiSelect" ? `Available ${name.trim() || field.name}` : "Value"} />
-        {type === "select" || type === "multiSelect" ? (
-          <div className="flex flex-col gap-px">
-            {options.map((option) => (
-              <ContextMenuItem key={option.id} icon={<OptionIcon option={option} />} selected={selectedIds.includes(option.id)} onClick={() => ToggleOption(option.id)}>
-                {option.label}
-              </ContextMenuItem>
-            ))}
-            <div className="flex items-center gap-1 px-1 pt-1">
-              <Input
-                value={optionDraft}
-                onChange={(e) => setOptionDraft(e.target.value)}
-                onKeyDown={(e) => {
-                  if (e.key === "Enter") AddOption();
-                }}
-                placeholder="New option…"
-                aria-label="New option name"
-                className="h-7 min-w-0 flex-1 rounded-md bg-transparent px-1.5 text-[13px] shadow-none"
-              />
-              <Button
-                variant="ghost"
-                isIconOnly
-                aria-label="Add option"
-                isDisabled={!optionDraft.trim()}
-                onPress={AddOption}
-                className="h-7 w-7 min-w-0 rounded-md text-[var(--lk-muted)] hover:bg-black/[0.06] hover:text-[var(--lk-ink)]"
-              >
-                <Plus size={14} strokeWidth={1.75} />
-              </Button>
-            </div>
-          </div>
-        ) : type === "checkbox" ? (
-          <div className="px-1">
-            <AppCheckbox checked={value === true} onChange={setValue} label="Checked" className="text-[13px] text-[var(--lk-ink)]" />
-          </div>
-        ) : type === "date" ? (
-          <div className="flex justify-center">
-            <DateCalendar label={name || "Date"} date={typeof value === "string" ? value : null} onChange={setValue} />
-          </div>
-        ) : (
-          <Input
-            autoFocus
-            type={type === "number" ? "number" : type === "url" ? "url" : "text"}
-            value={value === null ? "" : String(value)}
-            onChange={(e) => {
-              const raw = e.target.value;
-              setValue(type === "number" ? (raw === "" || Number.isNaN(Number(raw)) ? null : Number(raw)) : raw);
-            }}
-            onKeyDown={(e) => {
-              if (e.key === "Enter") Save();
-            }}
-            placeholder={type === "url" ? "https://…" : "Empty"}
-            aria-label={`${name} value`}
-            className="h-8 rounded-md px-2 text-[13px]"
-          />
-        )}
+        <ValueInput fieldId={field.id} name={name} type={type} value={value} onChange={setValue} onCommit={Save} />
       </div>
 
       <div className="flex items-center justify-between border-t border-[var(--lk-line)] pt-2">

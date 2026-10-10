@@ -105,10 +105,15 @@ The reference is the slash menu
   icon) only appears on hover at the end of the field row.
 - Properties panel: check a field to show or hide it (the value is kept). Reorder by dragging the
   grip, and only there, so nothing gets reordered by accident in the header itself.
-- Clicking a custom field pill opens the field editor: icon + name, Type chips, the value, then
-  Delete (removes the field from this project) on the left and Clear / Save on the right.
-  Everything is a draft until Save. Name, icon and type apply to all projects, and a type
-  change converts their values too ([ConvertValue](Shared/Lib/ProjectFields.ts)).
+- **Left click** on a custom field pill edits the value. Select and multi-select show the
+  options panel ("Available …"), date shows the calendar, text / number / link show an input.
+  A checkbox toggles right in the pill.
+- **Right click** opens the field settings: icon (the type icon when there is no custom one) and
+  name, Type chips, the value, then Delete (removes the field from this project) on the left
+  and Clear / Save on the right. Everything is a draft until Save. Name, icon and type apply to
+  all projects, and a type change converts their values too
+  ([ConvertValue](Shared/Lib/ProjectFields.ts)). `Popover` supports this with
+  `contextChildren`.
 - Dates use the same HeroUI calendar as the deadline (`DateCalendar`).
 - Zustand selectors must return stable references. `s.list ?? []` creates a new array on every
   call and loops React forever (error #185). Select the object and default outside.
