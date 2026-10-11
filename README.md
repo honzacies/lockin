@@ -62,7 +62,14 @@ offline. You can also point LockIn at an existing folder of Markdown files, such
 
 ### Projects
 - Projects with **status, priority, progress, deadline** and a root document plus sub-documents.
-- Custom status and priority options with your own colors and icons.
+- **Your own properties**: add fields like *Version*, *Client* or *Launch date* to a project: text,
+  number, date, select, multi-select, checkbox or link. Hide the built-in ones a project doesn't
+  need, and reorder them. Left-click a property to change its value, right-click it to rename it,
+  change its icon or type.
+- **Filter and sort projects** by state, progress, priority, deadline, tag or any of your own
+  select / checkbox properties. Filters combine.
+- Custom status and priority options with your own colors and icons. You can reorder them by
+  dragging in Settings.
 - **Icons** for projects, documents, folders and workspaces: emoji, ~1,600 **Lucide** icons, 4,000+
   **Google Material Symbols**, or your own image.
 
@@ -111,13 +118,17 @@ See [MCP server](#mcp-server) for setup.
 
 Pre-built installers are published on the **[Releases](../../releases)** page:
 
-- `Lockin_x.y.z_x64-setup.exe`: the regular installer (NSIS)
-- `Lockin_x.y.z_x64_en-US.msi`: an MSI package, for managed installs
+| | 64-bit (most PCs) | 32-bit (older PCs) |
+| --- | --- | --- |
+| Installer (NSIS) | `Lockin_x.y.z_x64-setup.exe` | `Lockin_x.y.z_x86-setup.exe` |
+| MSI package (managed installs) | `Lockin_x.y.z_x64_en-US.msi` | `Lockin_x.y.z_x86_en-US.msi` |
+
+Not sure which one? Pick **x64**. You only need x86 on a 32-bit Windows.
 
 The installers are **not code-signed** yet, so Windows SmartScreen may warn you the first time. Choose
 *More info → Run anyway*.
 
-LockIn currently targets **Windows 10/11 (x64)**. Tauri also supports macOS and Linux, but those
+LockIn currently targets **Windows 10/11 (x64 and x86)**. Tauri also supports macOS and Linux, but those
 builds aren't tested yet.
 
 ## Build from source
@@ -150,9 +161,18 @@ bun run tauri:build
 This produces a statically exported frontend (`TauriBuild/out`) and the installers in:
 
 ```
-TauriBuild/src-tauri/target/release/bundle/nsis/Lockin_0.1.0_x64-setup.exe
-TauriBuild/src-tauri/target/release/bundle/msi/Lockin_0.1.0_x64_en-US.msi
+TauriBuild/src-tauri/target/release/bundle/nsis/Lockin_<version>_x64-setup.exe
+TauriBuild/src-tauri/target/release/bundle/msi/Lockin_<version>_x64_en-US.msi
 ```
+
+For the 32-bit build, add the Rust target once and pass it to Tauri:
+
+```bash
+rustup target add i686-pc-windows-msvc
+cd TauriBuild && bun run tauri build --target i686-pc-windows-msvc
+```
+
+The x86 installers end up in `TauriBuild/src-tauri/target/i686-pc-windows-msvc/release/bundle/`.
 
 > On Windows, close any running `target/release/app.exe` before building. Windows locks the file
 > while it's running, and the build fails with `Access is denied`.

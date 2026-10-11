@@ -10,7 +10,7 @@ import { AppStatus, ImportMedia, Send } from "./Bridge";
 import { HasProjectMarker, MarkdownToDoc, SplitFrontmatter } from "@lockin/shared/Lib/Markdown";
 
 const server = new McpServer(
-  { name: "lockin", version: "0.1.0" },
+  { name: "lockin", version: "0.1.1" },
   {
     instructions: [
       "LockIn is the user's workspace for projects, notes and to-do lists.",
