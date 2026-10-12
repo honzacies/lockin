@@ -13,6 +13,17 @@
   Windows desktop app · built with Tauri 2, Next.js 16 and React 19 · <b>beta</b>
 </p>
 
+<p align="center">
+  <picture>
+    <source media="(prefers-color-scheme: dark)" srcset="Brand/screens/editor-dark.png">
+    <img src="Brand/screens/editor-light.png" alt="A document in LockIn's block editor, with a to-do list block" width="900">
+  </picture>
+</p>
+
+<p align="center">
+  <sub>Light and dark follow your GitHub theme. Every screenshot uses a made-up demo workspace.</sub>
+</p>
+
 ---
 
 ## What is LockIn?
@@ -60,6 +71,13 @@ offline. You can also point LockIn at an existing folder of Markdown files, such
 - **Quick Notes**: a scratchpad with its own to-do lists, for anything that doesn't belong to a
   project yet.
 
+<p align="center">
+  <picture>
+    <source media="(prefers-color-scheme: dark)" srcset="Brand/screens/canvas-dark.png">
+    <img src="Brand/screens/canvas-light.png" alt="A canvas with shapes, labels and curved connectors" width="900">
+  </picture>
+</p>
+
 ### Projects
 - Projects with **status, priority, progress, deadline** and a root document plus sub-documents.
 - **Your own properties**: add fields like *Version*, *Client* or *Launch date* to a project: text,
@@ -73,6 +91,13 @@ offline. You can also point LockIn at an existing folder of Markdown files, such
 - **Icons** for projects, documents, folders and workspaces: emoji, ~1,600 **Lucide** icons, 4,000+
   **Google Material Symbols**, or your own image.
 
+<p align="center">
+  <picture>
+    <source media="(prefers-color-scheme: dark)" srcset="Brand/screens/project-dark.png">
+    <img src="Brand/screens/project-light.png" alt="A project with status, priority, progress, deadline and its documents" width="900">
+  </picture>
+</p>
+
 ### To-dos and focus
 - **To-do Home** collects every to-do list from every note and project, with progress and deadlines.
   Reusable checklists (templates) can be hidden from it.
@@ -81,6 +106,20 @@ offline. You can also point LockIn at an existing folder of Markdown files, such
   LockIn tracks the time you spend on each task.
 - **Session window**: a small always-on-top window on the monitor you choose, so the current task
   stays in sight while you work in other apps.
+
+<p align="center">
+  <picture>
+    <source media="(prefers-color-scheme: dark)" srcset="Brand/screens/todo-dark.png">
+    <img src="Brand/screens/todo-light.png" alt="To-do Home: every to-do list in the workspace, grouped by project" width="900">
+  </picture>
+</p>
+
+<p align="center">
+  <picture>
+    <source media="(prefers-color-scheme: dark)" srcset="Brand/screens/board-dark.png">
+    <img src="Brand/screens/board-light.png" alt="The focus board with Backlog, This week and Today columns" width="900">
+  </picture>
+</p>
 
 ### Library and navigation
 - **Library** with folders, colored tags, favorites, recents, filters and a side-panel preview.
@@ -93,6 +132,13 @@ offline. You can also point LockIn at an existing folder of Markdown files, such
 - **Light and dark mode** (or follow the system), and a full **Settings** window (`Ctrl+,`): start
   page, editor, blocks, sidebar, focus sessions, priorities and statuses, AI access and
   **rebindable keyboard shortcuts**.
+
+<p align="center">
+  <picture>
+    <source media="(prefers-color-scheme: dark)" srcset="Brand/screens/library-dark.png">
+    <img src="Brand/screens/library-light.png" alt="The Library table with folders, tags, favorites and filters" width="900">
+  </picture>
+</p>
 
 ### Workspaces
 - **In-app workspace** (default): data is stored as JSON in the app data folder.
@@ -180,11 +226,15 @@ The x86 installers end up in `TauriBuild/src-tauri/target/i686-pc-windows-msvc/r
 ### Checks
 
 ```bash
-bun run typecheck                 # TypeScript across all packages
-bun Shared/Lib/Markdown.check.ts  # Markdown <-> editor round-trip
-bun Shared/Lib/Search.check.ts    # search ranking and matching
-bun Shared/Lib/Shortcuts.check.ts # keyboard shortcut parsing
-bun Mcp/Mcp.check.ts              # MCP server end-to-end (reads your real data)
+bun run typecheck                      # TypeScript across all packages
+bun Shared/Lib/Markdown.check.ts       # Markdown <-> editor round-trip
+bun Shared/Lib/Search.check.ts         # search ranking and matching
+bun Shared/Lib/Shortcuts.check.ts      # keyboard shortcut parsing
+bun Shared/Lib/TodoEdit.check.ts       # editing to-do lists inside a document
+bun Shared/Lib/ProjectFields.check.ts  # custom project properties
+bun Shared/Lib/ProjectFilters.check.ts # project filtering and sorting
+bun Shared/Lib/FitTabs.check.ts        # tab bar layout
+bun Mcp/Mcp.check.ts                   # MCP server end-to-end (reads your real data)
 ```
 
 `Markdown.check.ts` can also take a folder path. It then checks that every `.md` file in it survives
@@ -400,9 +450,10 @@ Shared/       UI, editor, stores and logic shared by every build (React, Tiptap,
   Platform/     interfaces each build implements (storage, media, windows)
 TauriBuild/   desktop app: Next.js static export + Tauri 2 (Rust) shell
   Platform/     Tauri implementations: file storage, vault storage, media, windows, MCP bridge
+  Tools/        demo workspace generator for the screenshots below
   src-tauri/    Rust side, config, icons
 Mcp/          MCP server (Bun, stdio)
-Brand/        logo source (SVG)
+Brand/        logo source (SVG) and the README screenshots
 ```
 
 The desktop app has **no backend**. Next.js runs as a static export (`output: "export"`): no server

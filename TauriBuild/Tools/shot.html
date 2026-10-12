@@ -1,0 +1,10 @@
+<!doctype html>
+<!-- Pomocník pro screenshoty: nastaví motiv do localStorage (stejný origin jako
+     appka) a přesměruje na cílovou stránku. Kopíruje se do out/ jen při focení. -->
+<meta charset="utf-8">
+<title>shot</title>
+<script>
+  const q = new URLSearchParams(location.search);
+  localStorage.setItem("lockin-settings", JSON.stringify({ state: { theme: q.get("theme") || "light" }, version: 0 }));
+  location.replace(q.get("to") || "/");
+</script>

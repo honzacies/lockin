@@ -31,6 +31,7 @@ const INDENT = "ml-[13px] flex flex-col gap-1 border-l border-[var(--lk-line)] p
 export function TodoSourcesSidebar() {
   const documents = UseDataStore((s) => s.documents);
   const projects = UseDataStore((s) => s.projects);
+  const libraryFolders = UseDataStore((s) => s.folders);
   const quickLists = UseTodoStore((s) => s.lists);
   const ignoredIds = UseIgnoredListsStore((s) => s.ids);
   const [query, setQuery] = useState("");
@@ -44,7 +45,8 @@ export function TodoSourcesSidebar() {
         id: doc.id,
         name: project?.rootDocumentId === doc.id ? project.name || doc.name : doc.name || "Untitled",
         icon: project?.rootDocumentId === doc.id ? project.icon : doc.icon,
-        folder: doc.folderId?.replace(/^dir:/, "") ?? "",
+        // Ve vaultu je folderId rovnou cesta ("dir:Notes/2026"), v knihovně ID složky.
+        folder: (doc.folderId?.startsWith("dir:") ? doc.folderId.slice(4) : libraryFolders[doc.folderId ?? ""]?.name) ?? "",
         sources,
         openTasks: sources.reduce((sum, s) => sum + s.tasks.length, 0),
       };
@@ -54,7 +56,7 @@ export function TodoSourcesSidebar() {
       byFolder.set(doc.folder, [...(byFolder.get(doc.folder) ?? []), doc]);
     }
     return { quickSources: CollectTodoSources(quickLists, [], projects).filter((src) => !ignoredIds.includes(src.listId)), byFolder };
-  }, [documents, projects, quickLists, ignoredIds]);
+  }, [documents, projects, libraryFolders, quickLists, ignoredIds]);
 
   const q = query.trim().toLowerCase();
   const Show = (doc: DocEntry) =>

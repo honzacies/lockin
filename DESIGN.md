@@ -193,12 +193,29 @@ scroll.
 
 ## 9. Testing UI without the desktop app
 
-The static export can run with a mocked Tauri IPC backed by a copy of your app data:
+The static export can run with a mocked Tauri IPC backed by a `{ "relative/path": "file text" }`
+map of workspace files — either a copy of your own AppData, or the made-up demo workspace used for
+the README screenshots:
 
 1. Build with `NEXT_PUBLIC_LOCKIN_MOCK=1 bun run build` in `TauriBuild/`.
-2. Write `TauriBuild/out/mock-fixture.json`: a `{ "relative/path": "file text" }` map of the
-   default workspace's AppData files.
+2. Write `TauriBuild/out/mock-fixture.json` — `bun TauriBuild/Tools/MakeMockFixture.ts` generates
+   the demo one (documents are written as Markdown there and go through `MarkdownToDoc`).
 3. Serve `TauriBuild/out`. The `tauri-export` preview config uses port 3002.
 
 The mock ([TauriBuild/Platform/DevMock.ts](TauriBuild/Platform/DevMock.ts)) keeps its files in
 localStorage, so edits survive a reload. Release builds don't contain it.
+
+### Re-taking the README screenshots
+
+`Brand/screens/<view>-<light|dark>.png`, 1440×900, straight out of headless Chrome:
+
+1. Do steps 1–3 above, then `cp TauriBuild/Tools/shot.html TauriBuild/out/shot/index.html`.
+   That page writes the theme into `localStorage` and redirects, because the screenshot run can't
+   click through Settings. It has to sit in its own folder — the static server drops the query
+   string when it redirects `/shot.html` to `/shot`.
+2. For each view and theme:
+   ```
+   chrome --headless=new --hide-scrollbars --window-size=1440,900 --virtual-time-budget=15000      --user-data-dir=<fresh dir> --screenshot=Brand/screens/<view>-<theme>.png      "http://localhost:3002/shot?theme=<theme>&to=<url-encoded app path>"
+   ```
+   A fresh profile per shot matters: the tab bar is persisted, so a reused profile shows tabs left
+   over from the previous screenshot.
