@@ -25,6 +25,7 @@ import {
   Strikethrough,
   Trash2,
 } from "@lockin/shared/Components/Shared/UiIcons";
+import { BlockSelectionPluginKey } from "./BlockSelectionExtension";
 import { ContextMenu, ContextMenuItem, ContextMenuLabel } from "@lockin/shared/Components/Shared/ContextMenu";
 import { UseUiStore, type BlockSettingsKind } from "@lockin/shared/Store/UseUiStore";
 import type { StyleableBlockType } from "@lockin/shared/Types/Project";
@@ -124,6 +125,17 @@ export function EditorContextMenu({ editor, children }: { editor: Editor; childr
   function Menu(close: () => void) {
     if (!target) return null;
     const { node, from } = target;
+    // Rozsah, na který se vztahuje Duplicate/Delete: marquee výběr, pokud
+    // nějaký je, jinak blok pod kurzorem. Bez toho by u vybrané skupiny
+    // bloků zmizel jen jeden z nich.
+    const marquee = BlockSelectionPluginKey.getState(editor.state)?.range ?? null;
+    const blocks = marquee ?? { from, to: from + node.nodeSize };
+    let blockCount = 0;
+    editor.state.doc.nodesBetween(blocks.from, blocks.to, (_child, pos, parent) => {
+      if (parent?.type.name === "doc") blockCount += 1;
+      return false;
+    });
+    const blockWord = blockCount > 1 ? `${blockCount} blocks` : "block";
     const editable = editor.isEditable;
     const isText = TEXT_BLOCKS.has(node.type.name);
     const styleType = StyleType(node);
@@ -197,6 +209,8 @@ export function EditorContextMenu({ editor, children }: { editor: Editor; childr
           </>
         ) : null}
 
+        {/* Marquee výběr má přednost před blokem pod kurzorem — jinak by
+            „smazat" u vybrané skupiny bloků smazalo jen jeden z nich. */}
         <ContextMenuLabel first={!editable}>Edit</ContextMenuLabel>
         <ContextMenuItem icon={<Copy {...ICON} />} onClick={() => Run(close, () => document.execCommand("copy"))}>
           Copy
@@ -218,16 +232,24 @@ export function EditorContextMenu({ editor, children }: { editor: Editor; childr
             </ContextMenuItem>
             <ContextMenuItem
               icon={<CopyPlus {...ICON} />}
-              onClick={() => Run(close, () => editor.chain().focus().insertContentAt(from + node.nodeSize, node.toJSON()).run())}
+              onClick={() =>
+                Run(close, () =>
+                  editor
+                    .chain()
+                    .focus()
+                    .insertContentAt(blocks.to, editor.state.doc.slice(blocks.from, blocks.to).content.toJSON())
+                    .run(),
+                )
+              }
             >
-              Duplicate block
+              Duplicate {blockWord}
             </ContextMenuItem>
             <ContextMenuItem
               icon={<Trash2 size={14} strokeWidth={1.75} />}
               danger
-              onClick={() => Run(close, () => editor.chain().focus().deleteRange({ from, to: from + node.nodeSize }).run())}
+              onClick={() => Run(close, () => editor.chain().focus().deleteRange(blocks).run())}
             >
-              Delete block
+              Delete {blockWord}
             </ContextMenuItem>
           </>
         ) : null}

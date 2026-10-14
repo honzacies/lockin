@@ -36,6 +36,10 @@ const MAP: Record<string, string> = {
   Strikethrough: "format-strikethrough", Sun: "light-mode", Table: "table", Tag: "sell", Tags: "style", Timer: "timer", Trash2: "delete",
   Type: "title", Underline: "format-underlined", Undo2: "undo", Upload: "upload", Video: "videocam", Volume2: "volume-up",
   Wand2: "auto-fix-high", Waypoints: "hub", X: "close", Zap: "bolt",
+  // callouty v editoru
+  Lightbulb: "lightbulb", TriangleAlert: "warning", OctagonAlert: "dangerous",
+  Sigma: "function",
+  Layers: "layers",
   // nové pro filtry Your Projects
   Maximize2: "open-in-full", Minimize2: "close-fullscreen", ArrowUpRight: "arrow-outward", HardDrive: "hard-drive",
   Pause: "pause", Play: "play-arrow", SkipForward: "skip-next", Columns3: "view-column", House: "home", Home: "home",

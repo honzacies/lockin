@@ -39,7 +39,7 @@ export interface WorkspaceData {
   tags: { id: string; name: string; color?: string }[];
 }
 
-const IDENTIFIER = "app.lockin.desktop";
+const IDENTIFIER = "honzacies.lockin.desktop";
 const DEFAULT_WORKSPACE: Workspace = { id: "default", name: "Your Workspace", path: null };
 // Stejné jako Shared/Store/UsePriorityStore.ts (store se sem kvůli závislostem neimportuje).
 const DEFAULT_PRIORITIES: PriorityOption[] = [

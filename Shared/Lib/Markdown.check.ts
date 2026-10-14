@@ -88,6 +88,41 @@ assert.equal(MarkdownToDoc('```lockin\n{"type":"media","attrs":{"src":"a.png"}}\
 // rozbitý JSON zůstane textem
 assert.equal(MarkdownToDoc("{lockin.todolist {oops}").content![0].type, "paragraph");
 
+// Callouty: Obsidian značka tam i zpátky, cizí druh se nesmí ztratit.
+const callout = MarkdownToDoc("> [!tip] Pamatuj\n> Derivace konstanty je nula.\n");
+assert.equal(callout.content![0].type, "callout");
+assert.equal(callout.content![0].attrs!.kind, "tip");
+assert.equal(callout.content![0].attrs!.title, "Pamatuj");
+assert.equal(MarkdownToDoc("> Obyčejná citace.").content![0].type, "blockquote");
+for (const md of [
+  "> [!tip] Pamatuj\n> Derivace konstanty je nula.",
+  "> [!note]\n> Jen text bez nadpisu.",
+  "> [!abstract] Shrnutí\n> První odstavec.\n>\n> Druhý odstavec.",
+  "> [!warning] Pozor\n> - položka\n> - druhá",
+  "> Obyčejná citace.",
+]) {
+  // DocToMarkdown ukončuje soubor novým řádkem, proto "\n" navíc.
+  assert.equal(DocToMarkdown(MarkdownToDoc(md)), md + "\n", md);
+}
+
+// Vzorce: `$…$` a `$$…$$` tam i zpátky, ceny v textu nesmí chytit.
+const inline = MarkdownToDoc("Plocha je $\\pi r^2$ přesně.\n");
+assert.equal(inline.content![0].content![1].type, "math");
+assert.equal(inline.content![0].content![1].attrs!.latex, "\\pi r^2");
+const money = MarkdownToDoc("Stojí to $5 až $10 podle místa.\n");
+assert.equal(money.content![0].content!.length, 1, "ceny nejsou vzorec");
+const blockMath = MarkdownToDoc("$$\n\\frac{a}{b}\n$$\n");
+assert.equal(blockMath.content![0].type, "mathBlock");
+assert.equal(blockMath.content![0].attrs!.latex, "\\frac{a}{b}");
+for (const md of [
+  "Plocha je $\\pi r^2$ přesně.",
+  "$$\n\\frac{a}{b}\n$$",
+  "Stojí to $5 až $10 podle místa.",
+  "V kódu `$x$` zůstane text.",
+]) {
+  assert.equal(DocToMarkdown(MarkdownToDoc(md)), md + "\n", md);
+}
+
 const fm = SplitFrontmatter("---\ntags: [a]\n---\n# Hi\n");
 assert.equal(fm.frontmatter, "---\ntags: [a]\n---\n");
 assert.equal(fm.body, "# Hi\n");

@@ -33,6 +33,7 @@ export function HasProjectMarker(doc: JSONContent | undefined): boolean {
  */
 const COMPONENTS: Record<string, string> = {
   todolist: "richTodoList",
+  flashcards: "flashcards",
   palette: "colorPalette",
   scenario: "scenario",
   media: "media",
@@ -108,8 +109,24 @@ export function ExtractVideoId(input: string): string | null {
   return trimmed.match(YOUTUBE_URL_ID)?.[1] ?? (/^[a-zA-Z0-9_-]{11}$/.test(trimmed) ? trimmed : null);
 }
 
+/** Ručně psaná sada kartiček smí být neúplná; ID se odvodí z pořadí, aby
+ * byla po každém načtení stejná. Karta smí být i řetězec "otázka :: odpověď". */
+function NormalizeFlashcards(raw: Json): Json {
+  return {
+    id: "flashcards",
+    title: "Flashcards",
+    ...raw,
+    cards: (Array.isArray(raw.cards) ? raw.cards : []).map((card: Json | string, i) => {
+      if (typeof card !== "string") return { id: `c${i}`, front: "", back: "", ...card };
+      const [front, ...rest] = card.split("::");
+      return { id: `c${i}`, front: front.trim(), back: rest.join("::").trim() };
+    }),
+  };
+}
+
 const CONFIG_NORMALIZERS: Record<string, (raw: Json) => Json> = {
   richTodoList: NormalizeTodoList,
+  flashcards: NormalizeFlashcards,
   colorPalette: NormalizePalette,
   scenario: NormalizeScenario,
 };
@@ -131,6 +148,16 @@ function ParseComponent(raw: string): JSONContent | null {
     return null; // rozbitý JSON zůstane jako obyčejný text, nic se neztratí
   }
 }
+
+/** Hlavička Obsidian calloutu i s koncem řádku: `[!tip] Nadpis`. */
+const CALLOUT_HEAD = /^\[!([\w-]+)\][ \t]*(.*)(?:\r?\n|$)/;
+
+/** Text jako citace — každý řádek dostane `> `, prázdný jen `>`. */
+const Quoted = (text: string) =>
+  text
+    .split("\n")
+    .map((line) => (line ? `> ${line}` : ">"))
+    .join("\n");
 
 const FRONTMATTER = /^---\r?\n[\s\S]*?\r?\n---[ \t]*(?:\r?\n)*/;
 
@@ -182,13 +209,39 @@ function Inline(tokens: Token[] | undefined, marks: Mark[] = []): JSONContent[] 
         out.push(...Text(token.raw, marks));
     }
   }
-  return WikiLinks(out);
+  return MathSpans(WikiLinks(out));
 }
 
 const WIKI = /\[\[([^[\]\n]+)\]\]/g;
 
 /** Slepí sousední text se stejnými značkami (marked `[[x]]` občas rozseká)
  * a z `[[…]]` udělá link mark s href `wiki:…`. Kód se nechává být. */
+/** `$x^2$` v textu. Mezera hned za `$` nebo před ním vzorec není, aby
+ * „stálo to $5 až $10" zůstalo textem. */
+const MATH_INLINE = /\$(?!\s)((?:[^$\n]|\\\$)+?)(?<!\s)\$/g;
+/** Odstavec, který je celý `$$ … $$` (klidně přes víc řádků). */
+const MATH_BLOCK = /^\$\$([\s\S]+?)\$\$$/;
+
+/** Rozdělí textové uzly na kusy textu a vzorce. Stejný postup jako
+ * WikiLinks — běží až nad spojenými texty, takže `$` rozsekané tokenizérem
+ * na víc kusů se najde taky. */
+function MathSpans(nodes: JSONContent[]): JSONContent[] {
+  return nodes.flatMap((node) => {
+    const text = node.text ?? "";
+    if (node.type !== "text" || !text.includes("$") || node.marks?.some((m) => m.type === "code")) return [node];
+    const out: JSONContent[] = [];
+    let at = 0;
+    for (const match of text.matchAll(MATH_INLINE)) {
+      out.push(...Text(text.slice(at, match.index), node.marks ?? []));
+      out.push({ type: "math", attrs: { latex: match[1] } });
+      at = match.index + match[0].length;
+    }
+    if (!out.length) return [node];
+    out.push(...Text(text.slice(at), node.marks ?? []));
+    return out;
+  });
+}
+
 function WikiLinks(nodes: JSONContent[]): JSONContent[] {
   const merged: JSONContent[] = [];
   for (const node of nodes) {
@@ -233,13 +286,29 @@ function Block(token: Token): JSONContent[] {
       if (token.raw.trim() === PROJECT_MARKER) return [{ type: "hiddenRaw", attrs: { raw: PROJECT_MARKER } }];
       const component = ParseComponent(token.raw.trim());
       if (component) return [component];
+      const formula = token.raw.trim().match(MATH_BLOCK);
+      if (formula) return [{ type: "mathBlock", attrs: { latex: formula[1].trim() } }];
       return [Paragraph(Inline(token.tokens))];
     }
     case "text":
       // volný text uvnitř položky seznamu
       return [Paragraph(Inline(token.tokens ?? [{ type: "text", raw: token.raw, text: token.text }]))];
-    case "blockquote":
+    case "blockquote": {
+      // Obsidian callout: `> [!tip] Nadpis` na prvním řádku. Zbytek citace
+      // je jeho obsah; citace bez značky projde beze změny.
+      const head = (token as Tokens.Blockquote).text?.match(CALLOUT_HEAD);
+      if (head) {
+        const body = Blocks(marked.lexer((token as Tokens.Blockquote).text.slice(head[0].length)));
+        return [
+          {
+            type: "callout",
+            attrs: { kind: head[1].toLowerCase(), title: head[2].trim() },
+            content: body.length ? body : [Paragraph([])],
+          },
+        ];
+      }
       return [{ type: "blockquote", content: Blocks(token.tokens) }];
+    }
     case "hr":
       return [{ type: "horizontalRule" }];
     case "code": {
@@ -354,6 +423,10 @@ function InlineMd(nodes: JSONContent[] | undefined): string {
       out += "  \n";
       continue;
     }
+    if (node.type === "math") {
+      out += `$${String(node.attrs?.latex ?? "")}$`;
+      continue;
+    }
     if (node.type !== "text") {
       out += InlineMd(node.content);
       continue;
@@ -414,12 +487,14 @@ function BlockMd(node: JSONContent): string {
     case "heading":
       return `${"#".repeat(Number(node.attrs?.level) || 1)} ${InlineMd(content)}`;
     case "blockquote":
-      return content
-        .map(BlockMd)
-        .join("\n\n")
-        .split("\n")
-        .map((line) => (line ? `> ${line}` : ">"))
-        .join("\n");
+      return Quoted(content.map(BlockMd).join("\n\n"));
+    case "callout": {
+      const head = `[!${String(node.attrs?.kind ?? "note")}]${node.attrs?.title ? ` ${String(node.attrs.title)}` : ""}`;
+      const body = content.map(BlockMd).join("\n\n");
+      return Quoted(body ? `${head}\n${body}` : head);
+    }
+    case "mathBlock":
+      return `$$\n${String(node.attrs?.latex ?? "")}\n$$`;
     case "horizontalRule":
       return "---";
     case "hiddenRaw":

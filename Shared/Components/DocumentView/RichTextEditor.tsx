@@ -15,6 +15,10 @@ import { TextStyle, Color, FontFamily, FontSize } from "@tiptap/extension-text-s
 import TextAlign from "@tiptap/extension-text-align";
 import { SlashCommandExtension } from "./Editor/SlashCommand/SlashCommandExtension";
 import { TodoListExtension } from "./Editor/TodoList/TodoListExtension";
+import { CalloutExtension } from "./Editor/Callout/CalloutExtension";
+import { MathBlockExtension, MathExtension } from "./Editor/Math/MathExtension";
+import { FlashcardsExtension } from "./Editor/Flashcards/FlashcardsExtension";
+import { WikiSuggestionExtension } from "./Editor/WikiSuggestion/WikiSuggestionExtension";
 import { ColorPaletteExtension } from "./Editor/ColorPalette/ColorPaletteExtension";
 import { ScenarioExtension } from "./Editor/Scenario/ScenarioExtension";
 import { MediaExtension } from "./Editor/Media/MediaExtension";
@@ -66,7 +70,7 @@ interface RichTextEditorProps {
   compact?: boolean;
   /** Document settings menu's "Small text" toggle. */
   smallText?: boolean;
-  /** Document settings menu's "Lock page" toggle — read-only while true. */
+  /** Document settings menu's "Lock edits" toggle — read-only while true. */
   locked?: boolean;
   /** Document settings menu's Theme "Text" color. */
   themeForeground?: string;
@@ -105,6 +109,10 @@ export function RichTextEditor({
       TaskList,
       TaskItem.configure({ nested: true }),
       TodoListExtension,
+      CalloutExtension,
+      MathExtension,
+      MathBlockExtension,
+      FlashcardsExtension,
       ColorPaletteExtension,
       ScenarioExtension,
       MediaExtension,
@@ -124,6 +132,7 @@ export function RichTextEditor({
         placeholder: "Type '/' for commands, or just start writing…",
       }),
       SlashCommandExtension,
+      WikiSuggestionExtension,
       ImagePasteExtension,
       MarkdownPasteExtension,
     ],

@@ -22,6 +22,7 @@ import {
 import { Button, Input } from "@heroui/react";
 import type { DocumentRecord } from "@lockin/shared/Types/Project";
 import { ContextMenuBackRow, ContextMenuItem, ContextMenuLabel } from "@lockin/shared/Components/Shared/ContextMenu";
+import { CreateLock, EMPTY_DOC, ForgetKey, OpenWithKey, UnlockedKey } from "@lockin/shared/Lib/DocumentLock";
 import { FontPicker } from "@lockin/shared/Components/DocumentView/StyleEditor/FontPicker";
 import { FontCategoryTiles } from "@lockin/shared/Components/DocumentView/StyleEditor/FontCategoryTiles";
 import { ColorPicker } from "@lockin/shared/Components/DocumentView/StyleEditor/ColorPicker";
@@ -33,7 +34,7 @@ interface DocumentSettingsMenuProps {
   close: () => void;
 }
 
-type Step = "root" | "font" | "theme" | "move";
+type Step = "root" | "font" | "theme" | "move" | "password";
 
 /**
  * The document settings gear's menu (DocumentModeToolbar.tsx) — font/theme,
@@ -46,6 +47,9 @@ export function DocumentSettingsMenu({ document, close }: DocumentSettingsMenuPr
   const [query, setQuery] = useState("");
   const [confirmingDelete, setConfirmingDelete] = useState(false);
   const [copied, setCopied] = useState(false);
+  const [password, setPassword] = useState("");
+  const [passwordAgain, setPasswordAgain] = useState("");
+  const [busy, setBusy] = useState(false);
   const folders = UseDataStore((s) => s.folders);
   const importInputRef = useRef<HTMLInputElement>(null);
 
@@ -145,6 +149,61 @@ export function DocumentSettingsMenu({ document, close }: DocumentSettingsMenuPr
       .catch((error) => {
         console.warn("Document import failed", error);
       });
+  }
+
+  if (step === "password") {
+    return (
+      <div className="flex w-64 flex-col gap-1">
+        <ContextMenuBackRow onClick={() => setStep("root")} />
+        <form
+          className="flex flex-col gap-2 px-2 pb-2"
+          onSubmit={async (event) => {
+            event.preventDefault();
+            if (password.length < 4 || password !== passwordAgain || busy) return;
+            setBusy(true);
+            try {
+              // Zamyká se obsah, jak je teď v dokumentu; `text.json` se vyprázdní,
+              // aby se nikde neuložil otevřený.
+              const lock = await CreateLock(document.id, document.text.json, password);
+              Patch({ lock, text: { json: EMPTY_DOC } });
+              close();
+            } finally {
+              setBusy(false);
+            }
+          }}
+        >
+          <p className="text-[12px] leading-4 text-[var(--lk-muted)]">
+            The content gets encrypted. Without this password it can&rsquo;t be read — there is no recovery, not even
+            through LockIn.
+          </p>
+          <input
+            autoFocus
+            type="password"
+            value={password}
+            onChange={(e) => setPassword(e.target.value)}
+            placeholder="Password"
+            className="rounded-md border border-[var(--lk-line)] bg-[var(--lk-panel)] px-2 py-1 text-[13px] outline-none focus:border-[#0088ff]"
+          />
+          <input
+            type="password"
+            value={passwordAgain}
+            onChange={(e) => setPasswordAgain(e.target.value)}
+            placeholder="Password again"
+            className="rounded-md border border-[var(--lk-line)] bg-[var(--lk-panel)] px-2 py-1 text-[13px] outline-none focus:border-[#0088ff]"
+          />
+          {passwordAgain && password !== passwordAgain ? (
+            <p className="text-[12px] text-[#e5484d]">The two don&rsquo;t match.</p>
+          ) : null}
+          <button
+            type="submit"
+            disabled={password.length < 4 || password !== passwordAgain || busy}
+            className="rounded-md bg-[#0088ff] py-1 text-[13px] font-medium text-white hover:bg-[#0077e0] disabled:opacity-40"
+          >
+            {busy ? "Encrypting…" : "Protect document"}
+          </button>
+        </form>
+      </div>
+    );
   }
 
   if (step === "font") {
@@ -318,7 +377,10 @@ export function DocumentSettingsMenu({ document, close }: DocumentSettingsMenuPr
       {Matches("copy page contents", "duplicate", "move to", "folder", "delete document") ? (
         <>
           <ContextMenuLabel>Page</ContextMenuLabel>
-          {Matches("copy page contents") ? (
+          {/* U zamčeného dokumentu není co kopírovat — `text.json` je prázdný
+              a obsah leží v šifře. Tiše zkopírovat prázdno je horší než
+              položku nenabídnout. */}
+          {Matches("copy page contents") && !(document.lock && !UnlockedKey(document.id)) ? (
             <ContextMenuItem
               icon={<ClipboardCopy size={14} strokeWidth={1.75} className="text-[var(--lk-text2)]" />}
               onClick={HandleCopyContents}
@@ -387,7 +449,7 @@ export function DocumentSettingsMenu({ document, close }: DocumentSettingsMenuPr
         </>
       ) : null}
 
-      {Matches("lock page") ? (
+      {Matches("make document read-only", "lock edits", "read only", "password", "encrypt") ? (
         <>
           <ContextMenuLabel>Access</ContextMenuLabel>
           <ContextMenuItem
@@ -401,8 +463,41 @@ export function DocumentSettingsMenu({ document, close }: DocumentSettingsMenuPr
             onClick={() => UseDataStore.getState().ToggleDocumentLocked(document.id)}
             selected={document.isLocked}
           >
-            Lock page
+            Make document read-only
           </ContextMenuItem>
+          <p className="px-2 pb-1 text-[11px] leading-4 text-[var(--lk-muted)]">
+            Read-only — the text can&rsquo;t be changed until you unlock it. It stays readable for anyone who opens the
+            document.
+          </p>
+          {document.lock ? (
+            <>
+              <ContextMenuItem
+                icon={<LockOpen size={14} strokeWidth={1.75} className="text-[var(--lk-text2)]" />}
+                // Sundat ochranu jde jen u dokumentu odemčeného v téhle relaci:
+                // bez klíče není co vrátit do `text.json` a zbyl by prázdný list.
+                disabled={!UnlockedKey(document.id)}
+                onClick={async () => {
+                  const key = UnlockedKey(document.id);
+                  if (!key || !document.lock) return;
+                  Patch({ lock: undefined, text: { json: await OpenWithKey(document.lock, key) } });
+                  ForgetKey(document.id);
+                  close();
+                }}
+              >
+                Remove password
+              </ContextMenuItem>
+              {UnlockedKey(document.id) ? null : (
+                <p className="px-2 pb-1 text-[11px] leading-4 text-[var(--lk-muted)]">Unlock the document first.</p>
+              )}
+            </>
+          ) : (
+            <ContextMenuItem
+              icon={<Lock size={14} strokeWidth={1.75} className="text-[var(--lk-text2)]" />}
+              onClick={() => setStep("password")}
+            >
+              Protect with password…
+            </ContextMenuItem>
+          )}
         </>
       ) : null}
 

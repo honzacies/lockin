@@ -1,6 +1,7 @@
 import type { FieldValue } from "./ProjectFields";
 import type { JSONContent } from "@tiptap/core";
 import type { CanvasScene } from "@lockin/shared/Store/UseCanvasStore";
+import type { DocumentLock } from "@lockin/shared/Lib/DocumentLock";
 
 export type DocumentMode = "text" | "sketch";
 
@@ -76,6 +77,9 @@ export interface DocumentSummary {
   icon?: string;
   /** Read-only — the editor stops accepting input while set. */
   isLocked?: boolean;
+  /** Chráněno heslem: obsah je zašifrovaný tady a `text.json` zůstává prázdný,
+   * dokud ho uživatel neodemkne (Lib/DocumentLock.ts). */
+  lock?: DocumentLock;
   /** Shrinks the editor's default body text size. */
   smallText?: boolean;
   /** Wiki odkazy mimo text dokumentu — ve vaultu z frontmatteru (`related:`, `up:`).

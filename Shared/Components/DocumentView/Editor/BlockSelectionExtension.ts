@@ -29,7 +29,8 @@ interface BlockSelectionPluginState {
   movingRange: BlockRange | null;
 }
 
-const BlockSelectionPluginKey = new PluginKey<BlockSelectionPluginState>("blockSelectionHighlight");
+/** Exportovaný, aby se kontextové menu mohlo zeptat na vybrané bloky. */
+export const BlockSelectionPluginKey = new PluginKey<BlockSelectionPluginState>("blockSelectionHighlight");
 const DRAG_THRESHOLD_PX = 4;
 
 interface MarqueeRect {
@@ -244,12 +245,27 @@ const MOVE_TRIGGER_EXCLUDED_SELECTOR =
  * draggable). Clicking directly on `view.dom` itself (blank space below or
  * between blocks) or in the side gutter counts as background; everything
  * else is left to native text selection / the element's own click handler. */
+/**
+ * Leží bod události na posuvníku prvku? Scrollbar je mimo jeho
+ * `clientWidth`/`clientHeight`, ale událost má za cíl pořád ten prvek —
+ * bez téhle výjimky tažení za posuvník spustí marquee: nakreslí modrou
+ * čáru (obdélník nulové šířky), sebere scrollu pohyb a na dlouhém
+ * dokumentu appku uvaří přepočítáváním bloků při každém posunu.
+ */
+function IsOnScrollbar(event: PointerEvent, element: HTMLElement): boolean {
+  const rect = element.getBoundingClientRect();
+  return (
+    event.clientX > rect.left + element.clientLeft + element.clientWidth ||
+    event.clientY > rect.top + element.clientTop + element.clientHeight
+  );
+}
+
 function IsBackgroundTarget(view: EditorView, event: PointerEvent): boolean {
   const target = event.target;
   if (target instanceof Element && target.closest(INTERACTIVE_SELECTOR)) {
     return false;
   }
-  if (target === view.dom) return true;
+  if (target === view.dom) return !IsOnScrollbar(event, view.dom as HTMLElement);
   return IsInGutter(view, event.clientX);
 }
 
@@ -747,12 +763,45 @@ export function AttachMarqueeZone(view: EditorView, zone: HTMLElement): () => vo
   function OnPointerDown(event: PointerEvent) {
     if (event.button !== 0) return;
     if (view.dom.contains(event.target as Node)) return;
+    if (IsOnScrollbar(event, zone)) return;
     if (event.target instanceof Element && event.target.closest(INTERACTIVE_SELECTOR)) return;
     if (IsFocusedTextField()) return;
     RunBlockMarquee(view, event);
   }
   zone.addEventListener("pointerdown", OnPointerDown);
   return () => zone.removeEventListener("pointerdown", OnPointerDown);
+}
+
+/**
+ * Smaže rozsah vybraných bloků. Nejde použít `deleteSelection`: marquee
+ * commituje `TextSelection.between`, která neumí stát uvnitř atomových uzlů
+ * (to-do list, vzorec, kartičky, média), takže nad samými atomy zkolabuje do
+ * kurzoru a nativní Delete nemá co mazat. Rozsah proto bereme z pluginu.
+ */
+function DeleteBlockRange(view: EditorView, range: BlockRange): void {
+  const tr = view.state.tr.deleteRange(range.from, range.to);
+  // Prázdný dokument schéma (`block+`) nedovolí — po smazání všeho musí
+  // zůstat aspoň jeden odstavec.
+  if (tr.doc.content.size === 0) tr.insert(0, view.state.schema.nodes.paragraph.create());
+  const at = Math.min(range.from, tr.doc.content.size);
+  tr.setSelection(TextSelection.near(tr.doc.resolve(at)));
+  view.dispatch(tr.setMeta(BlockSelectionPluginKey, { range: null }));
+  view.focus();
+}
+
+/**
+ * Zkopíruje vybrané bloky přes serializér ProseMirroru, takže v HTML jde
+ * i `data-pm-slice` a atributy uzlů (config to-do listu, barvy, latex…).
+ * Vložení do jiného dokumentu je pak rekonstrukce téhož, ne přepis textu.
+ */
+function CopyBlockRange(view: EditorView, event: ClipboardEvent, range: BlockRange): boolean {
+  if (!event.clipboardData) return false;
+  const { dom, text } = view.serializeForClipboard(view.state.doc.slice(range.from, range.to));
+  event.clipboardData.clearData();
+  event.clipboardData.setData("text/html", dom.innerHTML);
+  event.clipboardData.setData("text/plain", text);
+  event.preventDefault();
+  return true;
 }
 
 /**
@@ -825,7 +874,25 @@ export const BlockSelectionExtension = Extension.create({
             }
             return decorations.length ? DecorationSet.create(state.doc, decorations) : null;
           },
+          handleKeyDown(view: EditorView, event: KeyboardEvent) {
+            if (event.key !== "Backspace" && event.key !== "Delete") return false;
+            const range = BlockSelectionPluginKey.getState(view.state)?.range;
+            if (!range) return false;
+            event.preventDefault();
+            DeleteBlockRange(view, range);
+            return true;
+          },
           handleDOMEvents: {
+            copy(view: EditorView, event: Event) {
+              const range = BlockSelectionPluginKey.getState(view.state)?.range;
+              return range ? CopyBlockRange(view, event as ClipboardEvent, range) : false;
+            },
+            cut(view: EditorView, event: Event) {
+              const range = BlockSelectionPluginKey.getState(view.state)?.range;
+              if (!range || !CopyBlockRange(view, event as ClipboardEvent, range)) return false;
+              DeleteBlockRange(view, range);
+              return true;
+            },
             pointerdown(view: EditorView, event: Event) {
               const pointerEvent = event as PointerEvent;
               if (pointerEvent.button !== 0) return false;

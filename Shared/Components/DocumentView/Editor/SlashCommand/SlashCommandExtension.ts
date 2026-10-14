@@ -16,7 +16,20 @@ export const SlashCommandExtension = Extension.create({
       suggestion: {
         char: "/",
         startOfLine: false,
+        // Výchozí `[" "]` by menu otevřelo jen po mezeře nebo na začátku
+        // řádku — napsat `/` hned za slovo by pak tiše nedělalo nic.
+        allowedPrefixes: null,
         command: ({ editor, range, props }) => {
+          // Text za kurzorem odštípneme do vlastního odstavce. Bez toho ho
+          // obalující bloky (citace, callout) spolknou celý a vkládané uzly
+          // ho nechají slepený za sebou.
+          const $end = editor.state.doc.resolve(range.to);
+          const rest = $end.parent.isTextblock
+            ? $end.parent.textBetween($end.parentOffset, $end.parent.content.size)
+            : "";
+          // `splitBlock` nechá kurzor v nově odštípnutém odstavci, takže ho
+          // vracíme zpátky — jinak by se blok vytvořil z toho zbytku.
+          if (rest.trim()) editor.chain().setTextSelection(range.to).splitBlock().setTextSelection(range.from).run();
           (props as SlashCommandItem).command({ editor, range });
         },
         items: ({ query }: { query: string }) =>
@@ -37,6 +50,10 @@ export const SlashCommandExtension = Extension.create({
                 editor: props.editor,
               });
               unmount = props.mount(component.element as HTMLElement);
+              // Plovoucí panel visí na <body> bez z-indexu, takže by ho
+              // přebila každá lepkavá hlavička v dokumentu (to-do list má
+              // z-20). Stejná vrstva jako Popover.
+              (component.element as HTMLElement).style.zIndex = "250";
             },
             onUpdate: (props) => {
               component.updateProps({ items: props.items, command: props.command });

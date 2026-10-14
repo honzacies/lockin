@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { Input, Tabs } from "@heroui/react";
 import type { JSONContent } from "@tiptap/react";
 import type { DocumentMode, DocumentRecord, SketchContent } from "@lockin/shared/Types/Project";
@@ -16,6 +16,8 @@ import { UseUiStore } from "@lockin/shared/Store/UseUiStore";
 import { UpdatedPill } from "@lockin/shared/Components/Shared/MetaPills";
 import { IsDarkBackground } from "@lockin/shared/Lib/ColorAdapt";
 import { UseDebouncedDocumentSave } from "@lockin/shared/Components/DocumentView/UseDebouncedDocumentSave";
+import { PasswordGate } from "@lockin/shared/Components/DocumentView/PasswordGate";
+import { EMPTY_DOC, ResealLock, UnlockedKey } from "@lockin/shared/Lib/DocumentLock";
 
 interface StandaloneDocumentEditorProps {
   document: DocumentRecord;
@@ -45,9 +47,36 @@ export function StandaloneDocumentEditor({
 
   const [nameDraft, setNameDraft] = useState(document.name);
   const [descriptionDraft, setDescriptionDraft] = useState(document.description);
+  // Rozšifrovaný obsah zamčeného dokumentu žije jen tady v paměti; do storu
+  // ani na disk se nikdy nedostane (viz SaveDocument níž).
+  const [unlocked, setUnlocked] = useState<JSONContent | null>(null);
+  // Zrcadlo stavu pro ukládání: odložené uložení běží z timeru, kde by stav
+  // z uzávěru mohl být o render pozadu.
+  const unlockedRef = useRef<JSONContent | null>(null);
+  const locked = Boolean(document.lock) && unlocked === null;
+
+  async function SaveDocument(next: DocumentRecord) {
+    // Pojistka proti úniku: dokument je ve storu zamčený, ale draft pochází
+    // z doby před zamčením. Uložit ho by zahodilo zámek a vypsalo obsah
+    // otevřeně — radši neuložíme nic, obsah je pořád v šifře.
+    if (UseDataStore.getState().documents[next.id]?.lock && !next.lock) return;
+    // Zamčený a neodemčený dokument nemá co ukládat. Bez tohohle by stačilo,
+    // aby editor po připojení ohlásil svůj (prázdný) obsah, a přešifroval by
+    // prázdno přes skutečný text.
+    if (next.lock && !unlockedRef.current) return;
+    const key = next.lock ? UnlockedKey(next.id) : undefined;
+    if (!next.lock || !key) {
+      upsertDocument(next);
+      return;
+    }
+    // Zamčený dokument se ukládá jen jako šifra — `text.json` zůstává prázdný,
+    // ať se obsah neobjeví v souboru ani v exportu.
+    upsertDocument({ ...next, text: { json: EMPTY_DOC }, lock: await ResealLock(key, next.lock, next.text.json) });
+  }
+
   const { draftRef, ScheduleSave } = UseDebouncedDocumentSave({
     initialDocument: document,
-    onSave: upsertDocument,
+    onSave: SaveDocument,
   });
 
   // The settings menu (style/theme/lock toggles) writes straight to the
@@ -64,6 +93,19 @@ export function StandaloneDocumentEditor({
       showTableOfContents: document.showTableOfContents,
     };
   }, [document.style, document.theme, document.smallText, document.isLocked, document.showTableOfContents]);
+
+  // Zapnutí i zrušení ochrany heslem mění `text` (šifra ↔ otevřený obsah)
+  // a děje se mimo editor, v nabídce nastavení. Bez tohohle by draft držel
+  // podobu z doby předtím a první další úprava by ji uložila zpátky.
+  // Závislost je úmyslně jen `Boolean(lock)`: samotný zámek se mění při
+  // každém uložení (nový nonce) a draft by se resetoval uprostřed psaní.
+  const isProtected = Boolean(document.lock);
+  useEffect(() => {
+    draftRef.current = { ...draftRef.current, lock: document.lock, text: document.text };
+    unlockedRef.current = null;
+    setUnlocked(null);
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- jen při změně ochrany
+  }, [isProtected]);
 
   // Text změněný zvenku (MCP, To-do Home) — draft ho převezme a editor se
   // přes `key` znovu připojí s novým obsahem.
@@ -118,6 +160,22 @@ export function StandaloneDocumentEditor({
         document={document}
       />
 
+      {locked ? (
+        <PasswordGate
+          documentId={document.id}
+          lock={document.lock!}
+          name={document.name}
+          onUnlock={(json) => {
+            unlockedRef.current = json;
+            setUnlocked(json);
+            // Draft musí nést rozšifrovaný text, jinak by první uložení
+            // zašifrovalo prázdný dokument a obsah by zmizel.
+            draftRef.current = { ...draftRef.current, text: { json } };
+          }}
+        />
+      ) : null}
+
+      {locked ? null : (
       <div
         className={`min-h-0 flex-1 ${mode === "sketch" ? "flex flex-col overflow-hidden" : "overflow-y-auto pb-16"} ${
           document.theme?.adaptBlocks && IsDarkBackground(document.theme?.background)
@@ -179,7 +237,7 @@ export function StandaloneDocumentEditor({
           <Tabs.Panel id="text" className={`flex flex-1 flex-col ${compact ? "pt-4" : "pt-10"}`}>
             <RichTextEditor
               key={document.revision ?? 0}
-              initialContent={document.text.json}
+              initialContent={unlocked ?? document.text.json}
               onChange={HandleTextChange}
               style={document.style}
               compact={compact}
@@ -194,6 +252,7 @@ export function StandaloneDocumentEditor({
           </Tabs.Panel>
         </div>
       </div>
+      )}
     </Tabs>
     {/* Editor stylů typu bloku (tužka ve slash menu, „Style…" v kontextovém menu). */}
     {styleEditorTarget ? (

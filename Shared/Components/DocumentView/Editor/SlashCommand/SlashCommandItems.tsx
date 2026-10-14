@@ -13,7 +13,10 @@ import {
   ListOrdered,
   type LucideIcon,
   Minus,
+  Info,
+  Layers,
   Palette,
+  Sigma,
   Quote,
   Table,
   Type,
@@ -24,6 +27,7 @@ import { StripHeadingOverrides } from "./StripHeadingOverrides";
 
 export type SlashCommandGroup =
   | "TEXT"
+  | "SCHOOL"
   | "STYLING"
   | "LIST"
   | "MEDIA"
@@ -152,6 +156,31 @@ export const SLASH_COMMAND_ITEMS: SlashCommandItem[] = [
   },
 
   // ── STYLING ─────────────────────────────────────────────
+  // ── SCHOOL ──────────────────────────────────────────────
+  {
+    title: "Formula",
+    description: "Math and physics with LaTeX — $x^2$",
+    group: "SCHOOL",
+    blockType: null,
+    icon: Sigma,
+    command: ({ editor, range }) => editor.chain().focus().deleteRange(range).setMathBlock().run(),
+  },
+  {
+    title: "Callout",
+    description: "Highlighted box — remember, watch out, tip",
+    group: "SCHOOL",
+    blockType: null,
+    icon: Info,
+    command: ({ editor, range }) => editor.chain().focus().deleteRange(range).setCallout("note").run(),
+  },
+  {
+    title: "Flashcards",
+    description: "Question and answer pairs you can test yourself on",
+    group: "SCHOOL",
+    blockType: null,
+    icon: Layers,
+    command: ({ editor, range }) => editor.chain().focus().deleteRange(range).insertFlashcards().run(),
+  },
   {
     title: "Divider",
     description: "Horizontal divider line",

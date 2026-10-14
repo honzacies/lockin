@@ -1,5 +1,7 @@
 @import "tailwindcss";
 @import "@heroui/styles";
+/* KaTeX — vzorce v editoru (Editor/Math). */
+@import "katex/dist/katex.min.css";
 
 /* Tailwind v4 odvozuje, kde hledat třídy, od umístění tohoto souboru — ten
  * ale leží v Shared/Styles/, takže by sám o sobě neviděl `app/` jednotlivých

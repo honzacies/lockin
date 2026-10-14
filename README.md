@@ -244,7 +244,7 @@ a load and save unchanged, which is useful before you point LockIn at an existin
 
 | Workspace | Location |
 | --- | --- |
-| In-app (default) | `%APPDATA%\app.lockin.desktop\` on Windows: `Documents/`, `Projects/`, `Media/` and a few `*.json` stores |
+| In-app (default) | `%APPDATA%\honzacies.lockin.desktop\` on Windows: `Documents/`, `Projects/`, `Media/` and a few `*.json` stores |
 | Folder | Your `.md` files stay in your folder. LockIn keeps small metadata files (icons, favorites, board) in the app data folder, prefixed with the workspace ID |
 
 Writes are atomic: LockIn writes a temp file and renames it, so a crash never leaves a half-written
